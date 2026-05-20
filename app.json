@@ -3,15 +3,21 @@
     "name": "ZChat",
     "slug": "zchat-mobile",
     "version": "1.0.0",
+    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0052ce"
     },
-    "android": {},
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zchat.mobile"
+    },
+    "android": {
+      "package": "com.zchat.mobile"
+    },
     "web": {
       "bundler": "metro"
     }
