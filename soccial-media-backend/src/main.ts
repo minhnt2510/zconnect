@@ -69,6 +69,13 @@ async function bootstrap() {
     mkdirSync(uploadsRoot, { recursive: true });
   }
 
+  // Cross-origin headers so frontend from different origin can load images
+  rawExpress.use('/uploads', (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+  });
+
   // Serve local uploads first. If S3 is available, use it as fallback.
   rawExpress.use('/uploads', express.static(uploadsRoot));
 
