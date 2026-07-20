@@ -228,7 +228,7 @@ export function MessageThread({
                 {msg.type !== 'image' && msg.type !== 'file' && (
                   <button
                     type="button"
-                    className="invisible absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-lg text-white/70 opacity-0 transition-opacity hover:bg-white/20 group-hover:visible group-hover:opacity-100"
+                    className={cn('absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-lg md:invisible md:opacity-0 md:transition-opacity md:hover:bg-white/20 md:group-hover:visible md:group-hover:opacity-100', mine ? 'text-white/70' : 'text-gray-400 hover:text-gray-600')}
                     title="Mở menu thao tác"
                     aria-label="Mở menu thao tác"
                     onClick={(event) => {
