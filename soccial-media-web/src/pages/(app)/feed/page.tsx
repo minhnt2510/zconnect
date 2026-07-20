@@ -90,6 +90,8 @@ export default function FeedPage() {
   const [isCommenting, setIsCommenting] = useState<Record<number, boolean>>({});
   const [modalMediaUrl, setModalMediaUrl] = useState("");
   const [modalRawMediaUrl, setModalRawMediaUrl] = useState("");
+  const [modalPreviewUrl, setModalPreviewUrl] = useState("");
+  const [modalPreviewIsVideo, setModalPreviewIsVideo] = useState(false);
   const [modalVisibility, setModalVisibility] = useState<"public" | "private">(
     "public",
   );
@@ -197,6 +199,9 @@ export default function FeedPage() {
   };
 
   const closeComposerModal = () => {
+    if (modalPreviewUrl) URL.revokeObjectURL(modalPreviewUrl);
+    setModalPreviewUrl("");
+    setModalPreviewIsVideo(false);
     resetComposerPanels();
     setIsModalOpen(false);
   };
@@ -539,6 +544,9 @@ export default function FeedPage() {
       setPosts((prev) => dedupePostsById([response.post, ...prev]));
       setContent("");
       setModalContent("");
+      if (modalPreviewUrl) URL.revokeObjectURL(modalPreviewUrl);
+      setModalPreviewUrl("");
+      setModalPreviewIsVideo(false);
       setModalMediaUrl("");
       setModalRawMediaUrl("");
       setModalLocation("");
@@ -1020,6 +1028,12 @@ export default function FeedPage() {
       event.target.value = "";
       return;
     }
+
+    // Create local blob URL for preview (always works regardless of server)
+    if (modalPreviewUrl) URL.revokeObjectURL(modalPreviewUrl);
+    const blobUrl = URL.createObjectURL(file);
+    setModalPreviewUrl(blobUrl);
+    setModalPreviewIsVideo(isVideo);
 
     setUploadingMedia(true);
     setErrorText("");
@@ -1978,30 +1992,30 @@ export default function FeedPage() {
               </div>
             ) : null}
 
-            {modalMediaUrl ? (
+            {modalPreviewUrl || modalMediaUrl ? (
               <div className={`${styles.modalMediaPreview} relative`}>
-                {isVideoMediaUrl(modalMediaUrl) ? (
+                {modalPreviewIsVideo || isVideoMediaUrl(modalMediaUrl) ? (
                   <video
-                    src={modalMediaUrl}
+                    src={modalPreviewUrl || modalMediaUrl}
                     controls
                     className={styles.modalMediaPreviewAsset}
                   />
                 ) : (
                   <img
-                    src={modalMediaUrl}
+                    src={modalPreviewUrl || modalMediaUrl}
                     alt="Media preview"
                     className={styles.modalMediaPreviewAsset}
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                      setErrorText(
-                        "Không thể hiển thị media đã tải lên. Vui lòng thử lại.",
-                      );
-                    }}
                   />
                 )}
                 <button
                   type="button"
-                  onClick={() => { setModalMediaUrl(""); setModalRawMediaUrl(""); }}
+                  onClick={() => {
+                    if (modalPreviewUrl) URL.revokeObjectURL(modalPreviewUrl);
+                    setModalPreviewUrl("");
+                    setModalPreviewIsVideo(false);
+                    setModalMediaUrl("");
+                    setModalRawMediaUrl("");
+                  }}
                   className="absolute top-2 right-2 px-2.5 py-1.5 rounded-lg bg-black/70 text-white text-xs font-medium flex items-center gap-1 hover:bg-black/90 transition-colors"
                   title="Xoá ảnh"
                 >
@@ -2182,6 +2196,9 @@ export default function FeedPage() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (modalPreviewUrl) URL.revokeObjectURL(modalPreviewUrl);
+                          setModalPreviewUrl("");
+                          setModalPreviewIsVideo(false);
                           setModalMediaUrl("");
                           setModalRawMediaUrl("");
                           setComposerMoreMenuOpen(false);
