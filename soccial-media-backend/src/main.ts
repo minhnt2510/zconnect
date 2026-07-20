@@ -1,8 +1,8 @@
 ﻿import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { LogLevel, ValidationPipe } from '@nestjs/common';
-import { IoAdapter } from '@nestjs/platform-socket.io';
 import { join } from 'path';
+import { CustomIoAdapter } from './common/socket/custom-io-adapter';
 import { existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import express from 'express';
 import compression from 'compression';
@@ -60,7 +60,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  app.useWebSocketAdapter(new IoAdapter(app));
+  app.useWebSocketAdapter(new CustomIoAdapter(app));
 
   const s3Service = app.get(S3Service);
 
