@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { LogLevel, ValidationPipe } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'fs';
 import express from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
@@ -102,6 +102,13 @@ async function bootstrap() {
     });
   }
 
+  // Sync existing local uploads to S3 (so they survive container restarts)
+  if (s3Service.isAvailable) {
+    syncUploadsToS3(uploadsRoot, s3Service).catch((err) =>
+      console.error('S3 startup sync failed:', err),
+    );
+  }
+
   const port = process.env.PORT || process.env.API_PORT || 5007;
 
   // Graceful shutdown
@@ -109,6 +116,56 @@ async function bootstrap() {
 
   await app.listen(port);
   console.log(`Server running on http://localhost:${port}`);
+}
+
+/**
+ * Walk local uploads dir and upload any file not yet in S3.
+ * This ensures files uploaded before S3 was configured survive restarts.
+ */
+async function syncUploadsToS3(rootDir: string, s3: S3Service): Promise<void> {
+  const walk = async (dir: string): Promise<void> => {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = join(dir, entry);
+      let stat;
+      try {
+        stat = statSync(full);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+      // Compute S3 key relative to rootDir: "uploads/..."
+      const relative = full.replace(/\\/g, '/');
+      const idx = relative.indexOf('uploads/');
+      if (idx === -1) continue;
+      const key = relative.slice(idx);
+      try {
+        // Check if already in S3
+        await s3.headObject(key);
+      } catch {
+        // Not in S3 → upload it
+        const { readFile } = await import('fs/promises');
+        try {
+          const buffer = await readFile(full);
+          await s3.upload(buffer, key, undefined);
+          console.log(`Synced to S3: ${key}`);
+        } catch (uploadErr) {
+          console.error(`Failed to sync ${key}:`, uploadErr);
+        }
+      }
+    }
+  };
+
+  await walk(rootDir);
+  console.log('S3 startup sync complete.');
 }
 
 // Process-level error handlers (prevent crashes on unhandled rejections)

@@ -3,6 +3,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -54,6 +55,13 @@ export class S3Service {
 
     return this.client.send(
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+  }
+
+  async headObject(key: string) {
+    if (!this.client) throw new Error('S3 not configured');
+    await this.client.send(
+      new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
     );
   }
 }
