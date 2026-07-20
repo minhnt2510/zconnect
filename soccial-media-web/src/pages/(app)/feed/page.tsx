@@ -1052,6 +1052,10 @@ export default function FeedPage() {
       setModalRawMediaUrl(uploaded.rawUrl || uploaded.mediaUrl);
     } catch (error) {
       if (handleAuthExpired(error)) return;
+      // Upload failed — clear preview to avoid tricking user into submitting without media
+      if (modalPreviewUrl) URL.revokeObjectURL(modalPreviewUrl);
+      setModalPreviewUrl("");
+      setModalPreviewIsVideo(false);
       console.error("Failed to upload post media", error);
       setErrorText(
         error instanceof Error
@@ -1137,6 +1141,7 @@ export default function FeedPage() {
 
   const handleModalCreate = async (event: FormEvent) => {
     event.preventDefault();
+    if (uploadingMedia) return; // still uploading, don't submit yet
     await submitPost({
       text: modalContent,
       mediaUrl: modalRawMediaUrl || modalMediaUrl,
@@ -2240,6 +2245,7 @@ export default function FeedPage() {
               type="submit"
               className={styles.modalSubmit}
               disabled={
+                uploadingMedia ||
                 (!modalContent.trim() && !modalMediaUrl.trim()) || isPosting
               }
             >
