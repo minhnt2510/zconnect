@@ -142,13 +142,13 @@ export function MessageComposer({
         </div>
       ) : null}
 
-      <div className="relative flex items-end gap-1.5 overflow-x-auto scrollbar-none md:gap-2 [&::-webkit-scrollbar]:hidden">
-        <button type="button" onClick={handlePickAttachment} disabled={busyUploading} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-9 h-9 md:w-10 md:h-10 md:rounded-full" title="Chọn tệp đính kèm" aria-label="Chọn tệp đính kèm">
+      <div className="relative flex items-center gap-2 px-1">
+        <button type="button" onClick={handlePickAttachment} disabled={busyUploading} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-8 h-8" title="Chọn tệp đính kèm" aria-label="Chọn tệp đính kèm">
           <CirclePlus size={18} />
         </button>
 
         {onSuggestReplies ? (
-          <button type="button" onClick={onSuggestReplies} disabled={isSuggesting} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-9 h-9 md:w-10 md:h-10 md:rounded-full" title="Gợi ý trả lời AI" aria-label="Gợi ý trả lời AI">
+          <button type="button" onClick={onSuggestReplies} disabled={isSuggesting} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-8 h-8" title="Gợi ý trả lời AI" aria-label="Gợi ý trả lời AI">
             <Sparkles size={18} />
           </button>
         ) : null}
@@ -171,7 +171,7 @@ export function MessageComposer({
         ) : null}
 
         <textarea
-          className="h-10 min-h-[40px] flex-1 resize-none border-0 bg-transparent px-1.5 py-1.5 text-sm outline-none placeholder:text-gray-400 min-w-[60px] md:min-h-[44px] md:px-2 md:text-[16px]"
+          className="h-10 min-h-[40px] flex-1 min-w-0 resize-none border-0 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-gray-400 whitespace-nowrap truncate md:min-h-[44px] md:text-[16px]"
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           onBlur={() => onStopTyping?.()}
@@ -185,21 +185,24 @@ export function MessageComposer({
           }}
         />
 
-        <button type="button" onClick={() => { setShowEmojiPanel((prev) => !prev); setShowStickerPanel(false); setComposerMenuOpen(false) }} disabled={busyUploading} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-9 h-9 md:w-10 md:h-10 md:rounded-full" title="Mở bảng emoji" aria-label="Mở bảng emoji">
-          <Smile size={16} />
-        </button>
-        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={busyUploading} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-9 h-9 md:w-10 md:h-10 md:rounded-full" title="Chọn tệp" aria-label="Chọn tệp">
-          <Paperclip size={16} />
-        </button>
-        <button type="button" onClick={() => { setShowEmojiPanel(false); setShowStickerPanel((prev) => !prev); setComposerMenuOpen(false) }} disabled={busyUploading} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-9 h-9 md:w-10 md:h-10 md:rounded-full" title="Mở sticker" aria-label="Mở sticker">
-          <Sticker size={16} />
-        </button>
-        {showStickerPanel ? (
-          <button type="button" onClick={() => setShowStickerPanel(false)} className="flex shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 w-9 h-9 md:w-10 md:h-10 md:rounded-full" title="Đóng sticker" aria-label="Đóng sticker">
-            <X size={14} />
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={() => { setShowEmojiPanel((prev) => !prev); setShowStickerPanel(false); setComposerMenuOpen(false) }} disabled={busyUploading} className="flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-8 h-8" title="Mở bảng emoji" aria-label="Mở bảng emoji">
+            <Smile size={16} />
           </button>
-        ) : null}
-        <button type="button" onClick={handleSend} disabled={(!message.trim() && !attachmentDraft) || isSendingMessage || busyUploading} className="flex shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95 disabled:opacity-40 shadow-sm w-9 h-9 md:w-11 md:h-11 md:rounded-full md:shadow-md" title="Gửi tin nhắn" aria-label="Gửi tin nhắn">
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={busyUploading} className="flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-8 h-8" title="Chọn tệp" aria-label="Chọn tệp">
+            <Paperclip size={16} />
+          </button>
+          <button type="button" onClick={() => { setShowEmojiPanel(false); setShowStickerPanel((prev) => !prev); setComposerMenuOpen(false) }} disabled={busyUploading} className="flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 w-8 h-8" title="Mở sticker" aria-label="Mở sticker">
+            <Sticker size={16} />
+          </button>
+          {showStickerPanel ? (
+            <button type="button" onClick={() => setShowStickerPanel(false)} className="flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 w-8 h-8" title="Đóng sticker" aria-label="Đóng sticker">
+              <X size={14} />
+            </button>
+          ) : null}
+        </div>
+
+        <button type="button" onClick={handleSend} disabled={(!message.trim() && !attachmentDraft) || isSendingMessage || busyUploading} className="flex shrink-0 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-95 disabled:opacity-40 shadow-sm w-9 h-9" title="Gửi tin nhắn" aria-label="Gửi tin nhắn">
           <Send size={17} />
         </button>
 
