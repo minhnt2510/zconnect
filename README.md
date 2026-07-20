@@ -1,6 +1,4 @@
-<p align="center">
-  <img alt="ZConnect Banner" src="./soccial-media-web/assets/image_banner_github/image.png" width="100%">
-</p>
+![ZConnect Banner](./soccial-media-web/assets/image_banner_github/image.png)
 
 <div align="center">
   <h1>⚡ ZConnect</h1>
