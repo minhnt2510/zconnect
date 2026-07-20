@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { extname, join } from 'path';
 import { promises as fs } from 'fs';
+import { S3Service } from './s3.service';
 
 export type MediaType = 'post' | 'avatar' | 'cover' | 'message';
 
@@ -12,6 +13,8 @@ export interface UploadResult {
 
 @Injectable()
 export class MediaService {
+  constructor(private readonly s3: S3Service) {}
+
   private readonly typeConfig: Record<
     MediaType,
     { maxSize: number; allowedExtensions: string[]; subDir: string }
@@ -78,6 +81,13 @@ export class MediaService {
 
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${fileExt}`;
     const relativeDir = join('uploads', config.subDir, String(userId));
+
+    if (this.s3.isAvailable) {
+      const key = `${relativeDir.replace(/\\/g, '/')}/${fileName}`;
+      const fileUrl = await this.s3.upload(buffer, key, body?.contentType);
+      return { fileUrl, fileName, size: buffer.length };
+    }
+
     const absoluteDir = join(process.cwd(), relativeDir);
     await fs.mkdir(absoluteDir, { recursive: true });
 
