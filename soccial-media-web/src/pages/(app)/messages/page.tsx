@@ -7,13 +7,17 @@ import {
   ArrowLeft,
   BrainCircuit,
   ChevronDown,
+  Forward,
   Info,
   Languages,
   Phone,
   PhoneOff,
+  Pin,
   Search,
   Send,
   Sparkles,
+  Trash2,
+  Undo2,
   UserPlus,
   Video,
   Wand2,
@@ -4850,49 +4854,129 @@ export default function MessagesPage() {
           ) : null}
 
           {actionMenu && activeActionMessage ? (
-            <div ref={actionMenuRef} className="fixed z-50 w-52 rounded-xl border border-gray-200 bg-white py-1 shadow-xl" style={{ left: actionMenu.x, top: actionMenu.y }}>
-              <div className="flex items-center gap-2.5 border-b border-gray-100 px-3 py-2.5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(getSenderName(activeActionMessage.senderId, activeActionMessage))}</span>
-                <div className="min-w-0">
-                  <strong>{getSenderName(activeActionMessage.senderId, activeActionMessage)}</strong>
-                  <small>{formatVietnamTime(activeActionMessage.createdAt)}</small>
+            isMobileViewport ? (
+              <>
+                <button type="button" className="fixed inset-0 z-50 bg-black/20" aria-label="Đóng" onClick={() => setActionMenu(null)} />
+                <div className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[70vh] flex-col rounded-t-2xl bg-white pb-8 shadow-2xl">
+                  <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-gray-300" />
+                  <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(getSenderName(activeActionMessage.senderId, activeActionMessage))}</span>
+                    <div className="min-w-0">
+                      <strong className="block truncate text-sm">{getSenderName(activeActionMessage.senderId, activeActionMessage)}</strong>
+                      <small className="text-xs text-gray-400">{formatVietnamTime(activeActionMessage.createdAt)}</small>
+                    </div>
+                  </div>
+                  {(() => {
+                    const isActionMsgRecalled = !!(activeActionMessage.isDeleted || (activeActionMessage.meta as Record<string, unknown>)?.recalled)
+                    return (
+                      <div className="overflow-y-auto">
+                        {!isActionMsgRecalled ? (
+                          <>
+                            <div className="flex items-center justify-around border-b border-gray-100 px-4 py-3">
+                              {[
+                                { type: 'like', emoji: '👍', label: 'Thích' },
+                                { type: 'love', emoji: '❤️', label: 'Yêu thích' },
+                                { type: 'care', emoji: '🥰', label: 'Quan tâm' },
+                              ].map((r) => (
+                                <button key={r.type} type="button" onClick={() => { handleReaction(activeActionMessage, r.type); setActionMenu(null) }} className="flex h-12 w-12 items-center justify-center rounded-full text-2xl hover:bg-gray-100 active:scale-110 transition-transform" title={r.label} aria-label={r.label}>
+                                  {r.emoji}
+                                </button>
+                              ))}
+                            </div>
+                            <button type="button" onClick={() => { setForwardingMessageId(activeActionMessage.id); setActionMenu(null) }} className="flex w-full items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                              <Forward size={18} className="text-gray-400" />
+                              Chuyển tiếp
+                            </button>
+                            <button type="button" onClick={() => { void handleTogglePinMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                              <Pin size={18} className="text-gray-400" />
+                              {pinnedMessageIds.has(activeActionMessage.id) ? 'Bỏ ghim' : 'Ghim'}
+                            </button>
+                            {activeActionMessage.text && !translatedMessages[activeActionMessage.id] ? (
+                              <button type="button" onClick={() => { handleTranslateMessage(activeActionMessage.id, activeActionMessage.text!); setActionMenu(null) }} disabled={translatingIds[activeActionMessage.id]} className="flex w-full items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                                <Languages size={18} className="text-gray-400" />
+                                {translatingIds[activeActionMessage.id] ? 'Đang dịch...' : 'Dịch (AI)'}
+                              </button>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {activeActionMessage.senderId === user?.id ? (
+                          <>
+                            <div className="mx-5 h-px bg-gray-100" />
+                            <button type="button" onClick={() => { handleRecall(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-3 px-5 py-3 text-sm text-red-500 hover:bg-red-50">
+                              <Undo2 size={18} />
+                              Thu hồi
+                            </button>
+                            <button type="button" onClick={() => { handleDeleteMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-3 px-5 py-3 text-sm text-red-500 hover:bg-red-50">
+                              <Trash2 size={18} />
+                              Xóa
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    )
+                  })()}
                 </div>
+              </>
+            ) : (
+              <div ref={actionMenuRef} className="fixed z-50 w-56 rounded-xl border border-gray-200 bg-white py-1 shadow-xl" style={{ left: actionMenu.x, top: actionMenu.y }}>
+                <div className="flex items-center gap-2.5 border-b border-gray-100 px-3 py-2.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(getSenderName(activeActionMessage.senderId, activeActionMessage))}</span>
+                  <div className="min-w-0">
+                    <strong className="block truncate text-sm">{getSenderName(activeActionMessage.senderId, activeActionMessage)}</strong>
+                    <small className="text-xs text-gray-400">{formatVietnamTime(activeActionMessage.createdAt)}</small>
+                  </div>
+                </div>
+                {(() => {
+                  const isActionMsgRecalled = !!(activeActionMessage.isDeleted || (activeActionMessage.meta as Record<string, unknown>)?.recalled)
+                  return (
+                    <>
+                      {!isActionMsgRecalled ? (
+                        <>
+                          <div className="flex items-center justify-around border-b border-gray-100 px-3 py-2">
+                            {[
+                              { type: 'like', emoji: '👍', label: 'Thích' },
+                              { type: 'love', emoji: '❤️', label: 'Yêu thích' },
+                              { type: 'care', emoji: '🥰', label: 'Quan tâm' },
+                            ].map((r) => (
+                              <button key={r.type} type="button" onClick={() => { handleReaction(activeActionMessage, r.type); setActionMenu(null) }} className="flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-gray-100 active:scale-110 transition-transform" title={r.label} aria-label={r.label}>
+                                {r.emoji}
+                              </button>
+                            ))}
+                          </div>
+                          <button type="button" onClick={() => { setForwardingMessageId(activeActionMessage.id); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <Forward size={15} className="text-gray-400" />
+                            Chuyển tiếp
+                          </button>
+                          <button type="button" onClick={() => { void handleTogglePinMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <Pin size={15} className="text-gray-400" />
+                            {pinnedMessageIds.has(activeActionMessage.id) ? 'Bỏ ghim' : 'Ghim'}
+                          </button>
+                          {activeActionMessage.text && !translatedMessages[activeActionMessage.id] ? (
+                            <button type="button" onClick={() => { handleTranslateMessage(activeActionMessage.id, activeActionMessage.text!); setActionMenu(null) }} disabled={translatingIds[activeActionMessage.id]} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                              <Languages size={15} className="text-gray-400" />
+                              {translatingIds[activeActionMessage.id] ? 'Đang dịch...' : 'Dịch (AI)'}
+                            </button>
+                          ) : null}
+                        </>
+                      ) : null}
+                      {activeActionMessage.senderId === user?.id ? (
+                        <>
+                          <div className="mx-3 h-px bg-gray-100" />
+                          <button type="button" onClick={() => { handleRecall(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50">
+                            <Undo2 size={15} />
+                            Thu hồi
+                          </button>
+                          <button type="button" onClick={() => { handleDeleteMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50">
+                            <Trash2 size={15} />
+                            Xóa
+                          </button>
+                        </>
+                      ) : null}
+                    </>
+                  )
+                })()}
               </div>
-              {(() => {
-                const isActionMsgRecalled = !!(activeActionMessage.isDeleted || (activeActionMessage.meta as Record<string, unknown>)?.recalled)
-                return (
-                  <>
-                    {!isActionMsgRecalled ? (
-                      <>
-                        <button type="button" onClick={() => { handleReaction(activeActionMessage, 'like'); setActionMenu(null) }} title="Thích" aria-label="Thích">Thích</button>
-                        <button type="button" onClick={() => { handleReaction(activeActionMessage, 'love'); setActionMenu(null) }} title="Yêu thích" aria-label="Yêu thích">Yêu thích</button>
-                        <button type="button" onClick={() => { handleReaction(activeActionMessage, 'care'); setActionMenu(null) }} title="Quan tâm" aria-label="Quan tâm">Quan tâm</button>
-                        <button type="button" onClick={() => { setForwardingMessageId(activeActionMessage.id); setActionMenu(null) }}>Chuyển tiếp</button>
-                        <button type="button" onClick={() => { void handleTogglePinMessage(activeActionMessage); setActionMenu(null) }}>
-                          {pinnedMessageIds.has(activeActionMessage.id) ? 'Bỏ ghim' : 'Ghim'}
-                        </button>
-                      </>
-                    ) : null}
-                    {activeActionMessage.text && !translatedMessages[activeActionMessage.id] && !isActionMsgRecalled ? (
-                      <button
-                        type="button"
-                        onClick={() => { handleTranslateMessage(activeActionMessage.id, activeActionMessage.text!); setActionMenu(null) }}
-                        disabled={translatingIds[activeActionMessage.id]}
-                      >
-                        <Languages size={14} style={{ display: 'inline', marginRight: 4, marginBottom: -2 }} />
-                        {translatingIds[activeActionMessage.id] ? 'Đang dịch...' : 'Dịch (AI)'}
-                      </button>
-                    ) : null}
-                    {activeActionMessage.senderId === user?.id ? (
-                      <button type="button" onClick={() => { handleRecall(activeActionMessage); setActionMenu(null) }}>Thu hồi</button>
-                    ) : null}
-                    {activeActionMessage.senderId === user?.id ? (
-                      <button type="button" onClick={() => { handleDeleteMessage(activeActionMessage); setActionMenu(null) }}>Xóa</button>
-                    ) : null}
-                  </>
-                )
-              })()}
-            </div>
+            )
           ) : null}
 
           {reactionPicker && activeReactionMessage ? (
