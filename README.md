@@ -1,9 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/minhnt2510/zconnect/main/soccial-media-web/assets/image_banner_github/image.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/minhnt2510/zconnect/main/soccial-media-web/assets/image_banner_github/image.png">
-    <img alt="ZConnect Banner" src="https://raw.githubusercontent.com/minhnt2510/zconnect/main/soccial-media-web/assets/image_banner_github/image.png" width="100%">
-  </picture>
+  <img alt="ZConnect Banner" src="./soccial-media-web/assets/image_banner_github/image.png" width="100%">
 </p>
 
 <div align="center">
@@ -17,8 +13,7 @@
     <a href="https://github.com/minhnt2510/zconnect/actions/workflows/deploy.yml">
       <img src="https://img.shields.io/github/actions/workflow/status/minhnt2510/zconnect/deploy.yml?branch=main&style=for-the-badge&logo=github-actions&logoColor=white" alt="CI/CD">
     </a>
-    <img src="https://img.shields.io/github/languages/top/minhnt2510/zconnect?style=for-the-badge&logo=typescript" alt="TypeScript">
-    <img src="https://img.shields.io/github/license/minhnt2510/zconnect?style=for-the-badge" alt="License">
+    <img src="https://img.shields.io/github/languages/top/minhnt2510/zconnect?style=for-the-badge" alt="TypeScript">
   </p>
 
   <p>
