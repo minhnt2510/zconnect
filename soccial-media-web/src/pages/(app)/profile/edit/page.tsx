@@ -95,13 +95,7 @@ export default function EditProfilePage() {
       setCoverDraft(dataUrl)
       setBusyUpload(true)
       const coverDataUrl = await cropAvatarToBase64(dataUrl, 1, 0, 0)
-      const response = await fetch('/api/auth/cover-upload-base64', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fileName: 'cover.jpg', contentType: 'image/jpeg', base64Data: coverDataUrl }),
-      })
-      const result = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(result.message || 'Upload cover thất bại')
+      const result = await api.uploadCoverBase64(token, { fileName: 'cover.jpg', contentType: 'image/jpeg', base64Data: coverDataUrl })
       const uploadedCoverUrl = result.fileUrl || ''
       setCoverDraft('')
       setMessage('Đã tải ảnh bìa. Nhấn "Lưu thay đổi" để cập nhật.')
@@ -147,21 +141,9 @@ export default function EditProfilePage() {
     setBusyUpload(true)
     try {
       const base64Data = await cropAvatarToBase64(avatarDraft, avatarZoom, avatarCropX, avatarCropY)
-      const response = await fetch('/api/auth/avatar-upload-base64', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          fileName: avatarFileName,
-          contentType: 'image/jpeg',
-          base64Data,
-        }),
-      })
-      const uploaded = await response.json().catch(() => ({}))
+      const uploaded = await api.uploadAvatarBase64(token, { fileName: avatarFileName, contentType: 'image/jpeg', base64Data })
 
-      if (!response.ok || (!uploaded.mediaUrl && !uploaded.fileUrl && !uploaded.avatarUrl)) {
+      if (!uploaded.mediaUrl && !uploaded.fileUrl && !uploaded.avatarUrl) {
         throw new Error(uploaded.message || 'Upload avatar thất bại')
       }
 

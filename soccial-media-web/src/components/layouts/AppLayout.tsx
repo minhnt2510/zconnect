@@ -151,7 +151,7 @@ export default function AppLayout({
       })
       // Re-check profile completion badge
       const updatedUser = payload.user
-      const hasPending = !updatedUser.bio || !updatedUser.avatarUrl || !updatedUser.phone
+      const hasPending = !updatedUser.bio || !updatedUser.avatarUrl
       useChatStore.getState().setProfileHasPendingActions(Boolean(hasPending))
       if (payload.action && !['updated'].includes(payload.action)) {
         toast({
@@ -186,7 +186,7 @@ export default function AppLayout({
       // Check profile completion from store
       const currentUser = useAuthStore.getState().user
       if (currentUser) {
-        const hasPending = !currentUser.bio || !currentUser.avatarUrl || !currentUser.phone
+        const hasPending = !currentUser.bio || !currentUser.avatarUrl
         setProfileHasPendingActions(Boolean(hasPending))
       }
     }
@@ -208,8 +208,9 @@ export default function AppLayout({
       setFeedUnreadCount((n) => n + 1)
     }
 
+    const onAllNotificationsRead = () => setNotificationUnreadCount(0)
     socket.on('notification:new', onAnyNotification)
-    socket.on('notification:all-read', () => setNotificationUnreadCount(0))
+    socket.on('notification:all-read', onAllNotificationsRead)
     socket.on('friend:request', onFriendRequestEvent)
     socket.on('friend:accepted', onFriendAcceptedEvent)
     socket.on('post:created', onPostCreated)
@@ -221,17 +222,36 @@ export default function AppLayout({
       const { selectedConversationId, conversations } = useChatStore.getState()
       // Only bump unread when this conversation is not the one currently open
       if (conversationId !== selectedConversationId) {
-        useChatStore.setState({
-          conversations: conversations.map((conv) =>
-            conv.id === conversationId
-              ? {
-                  ...conv,
-                  unreadCount: (conv.unreadCount || 0) + 1,
-                  lastMessage: payload,
-                }
-              : conv
-          ),
-        })
+        const existing = conversations.find((c) => c.id === conversationId)
+        if (existing) {
+          useChatStore.setState({
+            conversations: conversations.map((conv) =>
+              conv.id === conversationId
+                ? {
+                    ...conv,
+                    unreadCount: (conv.unreadCount || 0) + 1,
+                    lastMessage: payload,
+                  }
+                : conv
+            ),
+          })
+        } else {
+          // Conversation not in store yet — create a stub so badge appears
+          useChatStore.setState({
+            conversations: [
+              ...conversations,
+              {
+                id: conversationId,
+                type: 'direct',
+                name: null,
+                avatarUrl: null,
+                unreadCount: 1,
+                lastMessage: payload,
+                members: [],
+              },
+            ],
+          })
+        }
       }
     }
     socket.on('message:new', handleNewMessage)
@@ -248,13 +268,13 @@ export default function AppLayout({
       socket.off('user:updated', onUserUpdated)
       socket.off('user:moderation-updated', onUserUpdated)
       socket.off('notification:new', onAnyNotification)
-      socket.off('notification:all-read')
+      socket.off('notification:all-read', onAllNotificationsRead)
       socket.off('friend:request', onFriendRequestEvent)
       socket.off('friend:accepted', onFriendAcceptedEvent)
       socket.off('message:new', handleNewMessage)
       socket.off('post:created', onPostCreated)
     }
-  }, [clearAuth, navigate, refreshToken, setAuth, token, updateUserAvatar, user])
+  }, [clearAuth, navigate, refreshToken, setAuth, token, updateUserAvatar, user?.id])
 
   const handleOpenCall = () => {
     setAcceptPending(true)

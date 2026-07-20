@@ -1060,11 +1060,12 @@ export default function MessagesPage() {
       refreshConversations().catch(() => undefined)
     })
 
-    socket.on('user:avatar-updated', (payload: { userId?: number; avatarUrl?: string }) => {
+    const handleAvatarUpdated = (payload: { userId?: number; avatarUrl?: string }) => {
       if (!payload?.userId) return
       const nextAvatar = resolveApiAssetUrl(payload.avatarUrl) ?? payload.avatarUrl ?? null
       updateUserAvatar(Number(payload.userId), nextAvatar)
-    })
+    }
+    socket.on('user:avatar-updated', handleAvatarUpdated)
 
     socket.on('message:seen', () => {
       refreshConversations().catch(() => undefined)
@@ -1462,7 +1463,7 @@ export default function MessagesPage() {
       socket.off('conversation:nickname')
       socket.off('conversation:members')
       socket.off('presence:updated')
-      socket.off('user:avatar-updated')
+      socket.off('user:avatar-updated', handleAvatarUpdated)
       socket.off('notification:new', handleSocketNotification)
       socket.off('call:offer')
       socket.off('call:answer')

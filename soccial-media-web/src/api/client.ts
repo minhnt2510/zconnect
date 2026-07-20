@@ -401,6 +401,13 @@ export const api = {
       }
     }),
 
+  uploadAvatarBase64: (token: string, payload: { fileName: string; contentType: string; base64Data: string }) =>
+    request<{ message?: string; mediaUrl?: string; fileUrl?: string; avatarUrl?: string; user?: User }>(
+      '/auth/avatar-upload-base64',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token
+    ),
+
   getSettings: (token: string) =>
     request<{
       settings: {
