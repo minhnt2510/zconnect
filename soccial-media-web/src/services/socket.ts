@@ -3,7 +3,13 @@ import { io, type Socket } from 'socket.io-client'
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
   import.meta.env.NEXT_PUBLIC_SOCKET_URL ||
-  (typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '')
+  (() => {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.NEXT_PUBLIC_API_BASE_URL
+    if (apiBase && /^https?:\/\//i.test(apiBase)) {
+      try { return new URL(apiBase).origin } catch { /* ignore */ }
+    }
+    return typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
+  })()
 const SOCKET_PATH = import.meta.env.VITE_SOCKET_PATH || import.meta.env.NEXT_PUBLIC_SOCKET_PATH || '/socket.io'
 
 let socketInstance: Socket | null = null

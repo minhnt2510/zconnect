@@ -6,7 +6,6 @@ import { formatVietnamTime, getMessageReactionItems } from '@/services/messages/
 import { CallHistoryMessage } from '@/components/call'
 import type { ChatMessage, Conversation } from '@/types'
 import { cn } from '@/utils'
-import styles from '../page.module.css'
 
 type VirtualSlice = {
   startIndex: number
@@ -45,11 +44,7 @@ const MESSAGE_REACTION_ICONS: Array<{ type: string; label: string; emoji: string
 
 function ReactionIcon({ type, size = 15 }: { type: string | null | undefined; size?: number }) {
   const reaction = MESSAGE_REACTION_ICONS.find((item) => item.type === type) || MESSAGE_REACTION_ICONS[2]
-  return (
-    <span className={styles.reactionEmojiGlyph} style={{ fontSize: size }}>
-      {reaction.emoji}
-    </span>
-  )
+  return <span style={{ fontSize: size, fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif', lineHeight: 1 }}>{reaction.emoji}</span>
 }
 
 function isTerminalGroupCallStatus(status: unknown) {
@@ -117,7 +112,7 @@ export function MessageThread({
 
   return (
     <div
-      className={cn(styles.messagesWrap, displayItems.length === 0 && styles.messagesWrapEmpty)}
+      className={cn('flex-1 overflow-y-auto px-3 py-2 md:px-4', displayItems.length === 0 && 'flex items-center justify-center')}
       ref={messagesWrapRef}
       onScroll={(event) => {
         const element = event.currentTarget
@@ -127,9 +122,9 @@ export function MessageThread({
         onScroll?.(event)
       }}
     >
-      {loadingOlderMessages ? <p className={styles.historyLoading}>Đang tải tin nhắn cũ hơn...</p> : null}
+      {loadingOlderMessages ? <p className="py-3 text-center text-xs text-gray-500">Đang tải tin nhắn cũ hơn...</p> : null}
       {virtualSlice.startIndex > 0 ? (
-        <p className={styles.virtualHint}>Đang hiển thị các tin nhắn mới nhất. Cuộn lên để tải thêm lịch sử.</p>
+        <p className="py-2 text-center text-xs text-gray-400">Đang hiển thị các tin nhắn mới nhất. Cuộn lên để tải thêm lịch sử.</p>
       ) : null}
 
       {displayItems.map((msg, index) => {
@@ -188,36 +183,42 @@ export function MessageThread({
             key={msg.id}
             data-message-id={msg.id}
             className={cn(
-              styles.messageRow,
-              mine && styles.messageRowMine,
-              groupedWithPrevious && styles.messageRowGrouped,
-              groupedWithNext && styles.messageRowHasNext,
+              'group flex gap-1.5 px-1 py-0.5',
+              mine && 'flex-row-reverse',
+              groupedWithPrevious && 'mt-0',
+              groupedWithNext && 'mb-0',
+              !groupedWithPrevious && 'mt-1.5',
             )}
           >
             {showAvatar ? (
-              <div className={styles.messageAvatar}>
-                {sender?.avatarUrl ? <img src={sender.avatarUrl} alt={senderName} className={styles.messageAvatarImage} loading="lazy" /> : (senderName[0] || 'U').toUpperCase()}
+              <div className="mt-1 h-8 w-8 shrink-0">
+                {sender?.avatarUrl ? <img src={sender.avatarUrl} alt={senderName} className="h-full w-full rounded-full object-cover" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">{(senderName[0] || 'U').toUpperCase()}</div>}
               </div>
             ) : (
-              <div className={styles.messageAvatarSpacer} aria-hidden="true" />
+              <div className="w-8 shrink-0" aria-hidden="true" />
             )}
 
-            <div className={cn(styles.messageBlock, hasReactions && styles.messageBlockHasReactions)}>
+            <div className={cn('min-w-0 max-w-[75%]', hasReactions && 'mb-1.5')}>
               {showSenderName ? (
-                <div className={styles.senderRow}>
-                  <Link to={`/profile/${msg.senderUsername || msg.senderId}`} className={styles.senderLink}>
+                <div className="mb-0.5 flex items-center gap-1.5 px-1">
+                  <Link to={`/profile/${msg.senderUsername || msg.senderId}`} className="text-xs font-semibold text-gray-700 hover:underline">
                     {senderName}
                   </Link>
-                  {msg.senderUsername ? <span className={styles.senderUsername}>@{msg.senderUsername}</span> : null}
+                  {msg.senderUsername ? <span className="text-[10px] text-gray-400">@{msg.senderUsername}</span> : null}
                 </div>
               ) : null}
 
               {reactionPickerMessageId === msg.id && reactionPickerPlacement === 'above' ? (
-                <div className={styles.reactionPickerSpacer} aria-hidden="true" />
+                <div className="h-6" aria-hidden="true" />
               ) : null}
 
               <div
-                className={cn(styles.bubble, mine && styles.bubbleMine)}
+                className={cn(
+                  'relative rounded-2xl px-3 py-2 text-sm leading-relaxed',
+                  mine ? 'rounded-br-md bg-blue-600 text-white' : 'rounded-bl-md bg-gray-100 text-gray-900',
+                  groupedWithPrevious && mine && 'rounded-tr-md',
+                  groupedWithPrevious && !mine && 'rounded-tl-md',
+                )}
                 data-message-bubble="true"
                 onContextMenu={(event) => {
                   event.preventDefault()
@@ -227,7 +228,7 @@ export function MessageThread({
                 {msg.type !== 'image' && msg.type !== 'file' && (
                   <button
                     type="button"
-                    className={styles.messageActionTrigger}
+                    className="invisible absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-lg text-white/70 opacity-0 transition-opacity hover:bg-white/20 group-hover:visible group-hover:opacity-100"
                     title="Mở menu thao tác"
                     aria-label="Mở menu thao tác"
                     onClick={(event) => {
@@ -240,26 +241,26 @@ export function MessageThread({
                 )}
 
                 {renderMessagePreview(msg)}
-                {pinnedMessageIds.has(msg.id) ? <small className={styles.forwardTag}>Đã ghim</small> : null}
+                {pinnedMessageIds.has(msg.id) ? <small className="mt-1 block text-[10px] opacity-60">Đã ghim</small> : null}
 
               </div>
 
               {hasReactions && msg.type !== 'image' && msg.type !== 'file' ? (
-                <div className={styles.reactionsPill} title={reactionNames}>
+                <div className={cn('mt-0.5 flex items-center gap-0.5 self-start rounded-full border border-gray-100 bg-white px-1.5 py-0.5 shadow-sm', mine && 'justify-end')} title={reactionNames}>
                   {reactionGroups.map((reaction) => (
-                    <span key={reaction.reaction} className={styles.reactionChip} title={reaction.label}>
-                      <span className={styles.reactionEmoji}>{reaction.emoji}</span>
-                      {reaction.count > 1 ? <span className={styles.reactionCount}>{reaction.count}</span> : null}
+                    <span key={reaction.reaction} className="flex items-center gap-0.5 text-xs" title={reaction.label}>
+                      <span style={{ fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif' }}>{reaction.emoji}</span>
+                      {reaction.count > 1 ? <span className="text-[10px] text-gray-500">{reaction.count}</span> : null}
                     </span>
                   ))}
                 </div>
               ) : null}
 
-              <div className={cn(styles.messageFooter, mine && styles.messageFooterMine)}>
+              <div className={cn('mt-0.5 flex items-center gap-1 px-1', mine && 'justify-end')}>
                 {!isRecalled && msg.type !== 'image' && msg.type !== 'file' ? (
                   <button
                     type="button"
-                    className={cn(styles.reactionTrigger, msg.viewerReaction && styles.reactionTriggerActive)}
+                    className={cn('invisible flex h-5 w-5 items-center justify-center rounded text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-600 group-hover:visible group-hover:opacity-100', msg.viewerReaction && 'visible opacity-100')}
                     title="Thả cảm xúc"
                     aria-label="Thả cảm xúc"
                     onClick={(event) => openReactionPicker(event, msg.id)}
@@ -267,12 +268,12 @@ export function MessageThread({
                     {msg.viewerReaction ? <ReactionIcon type={msg.viewerReaction} size={14} /> : <Smile size={14} />}
                   </button>
                 ) : null}
-                <span className={styles.messageTime}>{formatVietnamTime(msg.createdAt)}</span>
-                {readLabel ? <span className={styles.readLabel}>· {readLabel}</span> : null}
+                <span className="text-[10px] text-gray-400">{formatVietnamTime(msg.createdAt)}</span>
+                {readLabel ? <span className="text-[10px] text-gray-400">· {readLabel}</span> : null}
               </div>
 
               {reactionPickerMessageId === msg.id && reactionPickerPlacement !== 'above' ? (
-                <div className={styles.reactionPickerSpacer} aria-hidden="true" />
+                <div className="h-6" aria-hidden="true" />
               ) : null}
             </div>
           </div>
@@ -280,9 +281,9 @@ export function MessageThread({
       })}
 
       {typingUserIds.size > 0 ? (
-        <div className={styles.messageRow}>
-          <div className={styles.messageAvatar}>...</div>
-          <div className={cn(styles.bubble, styles.typingNotice)}>
+        <div className="flex items-center gap-1.5 px-1 py-0.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">...</div>
+          <div className="max-w-[75%] rounded-2xl rounded-bl-md bg-gray-100 px-3 py-2 text-sm text-gray-500">
             {Array.from(typingUserIds)
               .map((memberId) => selectedConversation?.members.find((member) => member.userId === memberId)?.fullName || `Người dùng #${memberId}`)
               .join(', ')}{' '}
@@ -291,7 +292,7 @@ export function MessageThread({
         </div>
       ) : null}
 
-      {virtualSlice.items.length === 0 ? <p className={styles.empty}>Chưa có tin nhắn trong cuộc trò chuyện này.</p> : null}
+      {virtualSlice.items.length === 0 ? <p className="text-center text-sm text-gray-500">Chưa có tin nhắn trong cuộc trò chuyện này.</p> : null}
     </div>
   )
 }

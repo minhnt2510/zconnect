@@ -4,41 +4,21 @@ import { ChangeEvent, CSSProperties, useCallback, useEffect, useLayoutEffect, us
 import { Link } from 'react-router-dom'
 import { useSearchParams } from 'react-router-dom'
 import {
-  BadgeCheck,
-  BadgeQuestionMark,
   ArrowLeft,
-  Bell,
-  BicepsFlexed,
-  CirclePlus,
-  File,
-  Flame,
-  Handshake,
-  Heart,
+  BrainCircuit,
+  ChevronDown,
   Info,
-  MoreHorizontal,
-  PartyPopper,
+  Languages,
   Phone,
   PhoneOff,
-  Rocket,
   Search,
   Send,
-  Smile,
-  SmilePlus,
   Sparkles,
-  Star,
-  Sticker as StickerIcon,
-  ThumbsUp,
   UserPlus,
   Video,
   Wand2,
-  BrainCircuit,
-  ChevronDown,
-  Languages,
   X,
-  Zap,
-  type LucideIcon,
 } from 'lucide-react'
-import styles from './page.module.css'
 import { ApiError, api, resolveApiAssetUrl, type CallHistoryItem } from '@/api/client'
 import {
   ActiveCallWindow,
@@ -83,7 +63,11 @@ import {
 import { normalizeIncomingMessageForViewer } from '@/services/messages/message-normalizer'
 import { parseNotificationMeta, type MessageNotificationItem } from '@/services/messages/notification-meta'
 import type { ChatMessage, Conversation, FriendConnection } from '@/types'
+import { MESSAGE_REACTION_ICONS } from './constants'
 import { MessageComposer } from './components/message-composer'
+import { MediaLightbox } from './components/media-lightbox'
+import { MessagePreview } from './components/message-preview'
+import { ReactionPicker } from './components/reaction-picker'
 import { ConversationDetailsPanel } from './components/conversation-details-panel'
 import { MessagesSidebar } from './components/messages-sidebar'
 import { MessageThread } from './components/message-thread'
@@ -132,16 +116,6 @@ type ConversationUiPrefs = {
   themeColor?: string | null
   backgroundUrl?: string | null
 }
-
-const MESSAGE_REACTION_ICONS: Array<{ type: string; label: string; emoji: string }> = [
-  { type: 'smile', label: 'Cười', emoji: '😄' },
-  { type: 'sad', label: 'Buồn', emoji: '😔' },
-  { type: 'like', label: 'Thích', emoji: '👍' },
-  { type: 'love', label: 'Yêu thích', emoji: '❤️' },
-  { type: 'wow', label: 'Bất ngờ', emoji: '😮' },
-  { type: 'cry', label: 'Khóc', emoji: '😭' },
-  { type: 'angry', label: 'Tức giận', emoji: '😡' },
-]
 
 const TURN_URLS = String(import.meta.env.VITE_TURN_URLS || import.meta.env.VITE_TURN_URL || '')
   .split(',')
@@ -236,59 +210,6 @@ const DEFAULT_CALL_SETTINGS: CallSettings = {
   autoMuteOnJoin: false,
   autoCameraOffOnJoin: false,
   blockStrangers: false,
-}
-
-const MESSAGE_ICON_TOKENS: Record<string, { label: string; Icon: LucideIcon }> = {
-  ':smile:': { label: 'Cười', Icon: Smile },
-  ':smile-plus:': { label: 'Vui vẻ', Icon: SmilePlus },
-  ':like:': { label: 'Thích', Icon: ThumbsUp },
-  ':love:': { label: 'Yêu thích', Icon: Heart },
-  ':thanks:': { label: 'Cảm ơn', Icon: Handshake },
-  ':sparkles:': { label: 'Lấp lánh', Icon: Sparkles },
-  ':fire:': { label: 'Nổi bật', Icon: Flame },
-  ':party:': { label: 'Ăn mừng', Icon: PartyPopper },
-  ':strong:': { label: 'Mạnh mẽ', Icon: BicepsFlexed },
-  ':rocket:': { label: 'Bứt phá', Icon: Rocket },
-  ':star:': { label: 'Ngôi sao', Icon: Star },
-  ':zap:': { label: 'Nhanh', Icon: Zap },
-}
-
-const STICKER_ICON_TOKENS: Record<string, { label: string; Icon: LucideIcon }> = {
-  'icon:smile': { label: 'Cười', Icon: Smile },
-  'icon:smile-plus': { label: 'Vui vẻ', Icon: SmilePlus },
-  'icon:heart': { label: 'Yêu thích', Icon: Heart },
-  'icon:sparkles': { label: 'Lấp lánh', Icon: Sparkles },
-  'icon:flame': { label: 'Nổi bật', Icon: Flame },
-  'icon:party': { label: 'Ăn mừng', Icon: PartyPopper },
-  'icon:rocket': { label: 'Bứt phá', Icon: Rocket },
-  'icon:star': { label: 'Ngôi sao', Icon: Star },
-  'icon:like': { label: 'Thích', Icon: ThumbsUp },
-  'icon:thanks': { label: 'Cảm ơn', Icon: Handshake },
-  'icon:strong': { label: 'Mạnh mẽ', Icon: BicepsFlexed },
-  'icon:zap': { label: 'Nhanh', Icon: Zap },
-  'icon:badge-check': { label: 'Đã xong', Icon: BadgeCheck },
-  'icon:question': { label: 'Cần hỏi', Icon: BadgeQuestionMark },
-  'icon:sticker': { label: 'Sticker', Icon: StickerIcon },
-  'icon:file': { label: 'Tệp', Icon: File },
-}
-
-const STICKER_EMOJI_TOKENS: Record<string, { label: string; emoji: string }> = {
-  'emoji:🤩': { label: 'Mắt sao', emoji: '🤩' },
-  'emoji:🥰': { label: 'Ấm áp', emoji: '🥰' },
-  'emoji:😂': { label: 'Cười lớn', emoji: '😂' },
-  'emoji:🥹': { label: 'Cảm động', emoji: '🥹' },
-  'emoji:🔥': { label: 'Nổi bật', emoji: '🔥' },
-  'emoji:🎉': { label: 'Ăn mừng', emoji: '🎉' },
-  'emoji:🚀': { label: 'Bứt phá', emoji: '🚀' },
-  'emoji:🌈': { label: 'Rực rỡ', emoji: '🌈' },
-  'emoji:👏': { label: 'Vỗ tay', emoji: '👏' },
-  'emoji:🙌': { label: 'Tuyệt vời', emoji: '🙌' },
-  'emoji:💪': { label: 'Mạnh mẽ', emoji: '💪' },
-  'emoji:🤝': { label: 'Cảm ơn', emoji: '🤝' },
-  'emoji:✅': { label: 'Đã xong', emoji: '✅' },
-  'emoji:❓': { label: 'Cần hỏi', emoji: '❓' },
-  'emoji:💡': { label: 'Ý tưởng', emoji: '💡' },
-  'emoji:📎': { label: 'Đính kèm', emoji: '📎' },
 }
 
 export default function MessagesPage() {
@@ -1700,7 +1621,7 @@ export default function MessagesPage() {
     if (!reactionPicker || !reactionPickerRef.current) return
     const buttons = Array.from(reactionPickerRef.current.querySelectorAll('button')) as HTMLButtonElement[]
     if (buttons.length === 0) return
-    const activeIndex = buttons.findIndex((btn) => btn.classList.contains(styles.reactionPickerActive))
+    const activeIndex = buttons.findIndex((btn) => btn.classList.contains('bg-blue-100'))
     const focusIndex = activeIndex >= 0 ? activeIndex : 0
     buttons[focusIndex]?.focus()
   }, [reactionPicker])
@@ -2092,8 +2013,8 @@ export default function MessagesPage() {
       return
     }
     target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    target.classList.add(styles.messageRowHighlighted)
-    window.setTimeout(() => target.classList.remove(styles.messageRowHighlighted), 1400)
+    target.classList.add('bg-yellow-100')
+    window.setTimeout(() => target.classList.remove('bg-yellow-100'), 1400)
   }, [selectedConversationId, setMessages, token])
 
   const chatPanelThemeClass = useMemo(() => {
@@ -4163,180 +4084,9 @@ export default function MessagesPage() {
 
   useEffect(() => { setGlobalCallParticipants(callParticipantProfiles) }, [callParticipantProfiles]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const renderMessagePreview = (msg: ChatMessage) => {
-    const renderRichMessageText = (text: string) => {
-      const richTokenRegex = /(https?:\/\/[^\s]+|:[a-z-]+:)/g
-      const parts = text.split(richTokenRegex)
-      if (parts.length === 1) return text
-
-      return parts.map((part, index) => {
-        const iconToken = MESSAGE_ICON_TOKENS[part]
-        if (iconToken) {
-          return (
-            <span key={`icon-${index}`} className={styles.inlineMessageIcon} title={iconToken.label} aria-label={iconToken.label}>
-              <iconToken.Icon size={16} />
-            </span>
-          )
-        }
-
-        if (!/^https?:\/\//i.test(part)) {
-          return <span key={`text-${index}`}>{part}</span>
-        }
-
-        const isSharedPostLink = /\/posts\/\d+(?:\?.*)?$/i.test(part)
-        return (
-          <a
-            key={`link-${index}`}
-            href={part}
-            target="_blank"
-            rel="noreferrer"
-            className={styles.fileLink}
-            title={isSharedPostLink ? 'Mở bài viết được chia sẻ' : 'Mở liên kết'}
-          >
-            {isSharedPostLink ? 'Xem bài viết được chia sẻ' : part}
-          </a>
-        )
-      })
-    }
-
-    const recalled = Boolean(msg.meta && (msg.meta as Record<string, unknown>).recalled)
-    const forwarded = Boolean(msg.meta && (msg.meta as Record<string, unknown>).forwarded)
-    const forwardedTag = forwarded ? <small className={styles.forwardTag}>Đã chuyển tiếp</small> : null
-
-    if (recalled) {
-      return <p className={styles.recalledText}>Tin nhắn đã được thu hồi</p>
-    }
-
-    const sharedPost = msg.meta?.sharedPost as
-      | {
-          id?: number | string
-          authorName?: string
-          authorAvatar?: string | null
-          content?: string
-          mediaUrl?: string | null
-          reactionCount?: number
-          commentCount?: number
-        }
-      | undefined
-
-    if (sharedPost) {
-      return (
-        <div className={styles.sharedPostMessage}>
-          {msg.text ? <p className={styles.messageText}>{msg.text}</p> : null}
-          <Link to={sharedPost.id ? `/posts/${sharedPost.id}` : '/feed'} className={styles.sharedPostCard}>
-            <div className={styles.sharedPostAuthor}>
-              {sharedPost.authorAvatar ? <img src={sharedPost.authorAvatar} alt={sharedPost.authorName || 'Tác giả'} /> : <span>{(sharedPost.authorName?.[0] || 'U').toUpperCase()}</span>}
-              <b>{sharedPost.authorName || 'Người dùng ZChat'}</b>
-            </div>
-            {sharedPost.content ? <p>{sharedPost.content}</p> : <p>Bài viết gốc không còn khả dụng</p>}
-            {sharedPost.mediaUrl ? <img src={sharedPost.mediaUrl} alt="Shared post" className={styles.sharedPostImage} loading="lazy" /> : null}
-            <small>
-              {Number(sharedPost.reactionCount || 0)} cảm xúc • {Number(sharedPost.commentCount || 0)} bình luận
-            </small>
-          </Link>
-        </div>
-      )
-    }
-
-    if (msg.type === 'image' && msg.mediaUrl) {
-      return (
-        <div className={styles.mediaWrap}>
-          {forwardedTag}
-          <button
-            type="button"
-            className={styles.imagePreviewButton}
-            onClick={() => setMediaLightbox({ url: msg.mediaUrl!, alt: msg.fileName || 'Ảnh trong tin nhắn' })}
-            aria-label="Xem ảnh"
-          >
-            <img
-              src={msg.mediaUrl}
-              alt={msg.fileName || 'image'}
-              loading="lazy"
-              onError={(event) => {
-                event.currentTarget.style.display = 'none'
-              }}
-            />
-          </button>
-          {msg.text ? <p className={styles.messageText}>{renderRichMessageText(msg.text)}</p> : null}
-        </div>
-      )
-    }
-
-    if (msg.type === 'video' && msg.mediaUrl) {
-      return (
-        <div className={styles.mediaWrap}>
-          {forwardedTag}
-          <video controls src={msg.mediaUrl} />
-          {msg.text ? <p className={styles.messageText}>{renderRichMessageText(msg.text)}</p> : null}
-        </div>
-      )
-    }
-
-    if (msg.type === 'audio' && msg.mediaUrl) {
-      return (
-        <div className={styles.mediaWrap}>
-          {forwardedTag}
-          <audio controls src={msg.mediaUrl} />
-          {msg.text ? <p className={styles.messageText}>{renderRichMessageText(msg.text)}</p> : null}
-        </div>
-      )
-    }
-
-    if (msg.type === 'sticker') {
-      const sticker = (msg.meta?.sticker as string) || msg.text || ':)'
-      const stickerEmoji = STICKER_EMOJI_TOKENS[sticker]
-      if (stickerEmoji) {
-        return (
-          <p className={styles.stickerBubble} title={stickerEmoji.label} aria-label={stickerEmoji.label}>
-            <span className={styles.stickerMessageGlyph}>{stickerEmoji.emoji}</span>
-          </p>
-        )
-      }
-      const stickerIcon = STICKER_ICON_TOKENS[sticker]
-      if (stickerIcon) {
-        return (
-          <p className={styles.stickerBubble} title={stickerIcon.label} aria-label={stickerIcon.label}>
-            <stickerIcon.Icon size={34} />
-          </p>
-        )
-      }
-      return <p className={styles.stickerBubble}>{sticker}</p>
-    }
-
-    if (msg.mediaUrl) {
-      return (
-        <div className={styles.mediaWrap}>
-          {forwardedTag}
-          <a href={msg.mediaUrl} target="_blank" rel="noreferrer" className={styles.fileLink}>
-            {msg.fileName || 'Mở tệp đính kèm'}
-          </a>
-          {(msg.mimeType || msg.fileSize) ? (
-            <small className={styles.fileMeta}>
-              {[msg.mimeType, msg.fileSize ? `${Math.max(1, Math.round(msg.fileSize / 1024))} KB` : null]
-                .filter(Boolean)
-                .join(' - ')}
-            </small>
-          ) : null}
-          {msg.text ? <p className={styles.messageText}>{renderRichMessageText(msg.text)}</p> : null}
-        </div>
-      )
-    }
-
-    return (
-      <div className={styles.messageText}>
-        {forwarded ? <small className={styles.forwardTagInline}>[Đã chuyển tiếp] </small> : null}
-        {msg.text ? renderRichMessageText(msg.text) : ''}
-        {translatedMessages[msg.id] && (
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
-            <strong style={{ fontSize: '0.8em', color: 'var(--color-primary-dark)', display: 'block', marginBottom: 4 }}>
-              <Languages size={12} style={{ display: 'inline', marginBottom: -2 }} /> Bản dịch AI:
-            </strong>
-            <p>{translatedMessages[msg.id]}</p>
-          </div>
-        )}
-      </div>
-    )
-  }
+  const renderMessagePreview = (msg: ChatMessage) => (
+    <MessagePreview msg={msg} translatedMessages={translatedMessages} onOpenMediaLightbox={(url, alt) => setMediaLightbox({ url, alt })} />
+  )
   const activeRailTab = showCallHistoryDrawer ? 'calls' as const
     : showNotificationsDrawer ? 'notifications' as const
     : showNewMessageModal ? 'newMessage' as const
@@ -4366,8 +4116,8 @@ export default function MessagesPage() {
     return diffDays < 7 ? `${diffDays} ngày trước` : new Date(value).toLocaleDateString('vi-VN')
   }
   return (
-    <div className={styles.page}>
-      <div className={`${styles.layout} ${isMobileViewport && mobileShowList ? styles.layoutShowList : ''} ${!showDetailsPanelDesktop ? styles.layoutNarrow : ''}`}>
+    <div className="flex h-full w-full flex-col overflow-hidden bg-white md:flex-row">
+      <div className={`flex min-h-0 flex-1 ${isMobileViewport && mobileShowList ? '' : ''} ${!showDetailsPanelDesktop ? '' : ''}`}>
         <MessagesSidebar
           initials={initials}
           userId={user?.id}
@@ -4422,245 +4172,151 @@ export default function MessagesPage() {
         {chatPanelThemeStyle ? <style>{chatPanelThemeStyle}</style> : null}
         <section
           className={[
-            styles.chatPanel,
-            chatPanelThemeClass,
-            selectedConversationUiPrefs.largeText ? styles.chatPanelLargeText : '',
-            selectedConversationUiPrefs.roundBubbles ? '' : styles.chatPanelSquareBubbles,
+            'relative flex min-h-0 flex-1 flex-col overflow-hidden',
+            selectedConversationUiPrefs.largeText ? 'text-base' : '',
+            selectedConversationUiPrefs.roundBubbles ? '' : '',
           ].filter(Boolean).join(' ')}
         >
-          <header className={styles.chatHeader}>
-            <button type="button" className={styles.backToListBtn} onClick={() => setMobileShowList(true)} aria-label="Quay lại danh sách">
+          <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 px-3 py-2.5 md:flex-wrap">
+            <button type="button" className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 md:hidden" onClick={() => setMobileShowList(true)} aria-label="Quay lại danh sách">
               <ArrowLeft size={18} />
             </button>
-            <div className={styles.chatIdentity}>
-              <div className={styles.chatHeaderAvatar}>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
                 {selectedConversation?.avatarUrl || directPeer?.avatarUrl ? (
                   <img
                     src={selectedConversation?.avatarUrl || directPeer?.avatarUrl || ''}
                     alt={selectedName}
                     loading="lazy"
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none'
-                    }}
+                    className="h-full w-full rounded-full object-cover"
+                    onError={(event) => { event.currentTarget.style.display = 'none' }}
                   />
                 ) : null}
                 <span>{(selectedName[0] || 'C').toUpperCase()}</span>
-                {directPeer ? <i className={directPeer.online ? styles.presenceDotOnline : styles.presenceDotOffline} /> : null}
+                {directPeer ? <i className={directPeer.online ? 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500' : 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-gray-300'} /> : null}
               </div>
-              <div className={styles.chatIdentityText}>
-                <h2>
-                  {directPeer ? <Link to={`/profile/${directPeer.username || directPeer.id}`}>{selectedName}</Link> : selectedName}
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-bold text-gray-900">
+                  {directPeer ? <Link to={`/profile/${directPeer.username || directPeer.id}`} className="hover:underline">{selectedName}</Link> : selectedName}
                 </h2>
-                {directPeer?.username ? <p className={styles.chatUsername}>@{directPeer.username}</p> : null}
-                <p>
+                {directPeer?.username ? <p className="truncate text-xs text-gray-500">@{directPeer.username}</p> : null}
+                <p className="truncate text-xs text-gray-500">
                   {directPeer
-                    ? isDirectPeerFriend
-                      ? `Bạn bè • ${directPeerActivityLabel}`
-                      : 'Chưa kết bạn • Giới hạn 3 tin nhắn'
+                    ? isDirectPeerFriend ? `Bạn bè • ${directPeerActivityLabel}` : 'Chưa kết bạn • Giới hạn 3 tin nhắn'
                     : `${selectedConversation?.onlineCount || 0} thành viên online`}
                 </p>
               </div>
             </div>
-            <div className={styles.chatActions}>
-              <button
-                type="button"
-                className={chatSummary ? styles.chatActionActive : undefined}
-                onClick={handleSummarizeChat}
-                disabled={isSummarizing || !selectedConversationId}
-                data-tooltip="Summarize chat"
-                data-tooltip-description="Create an AI summary"
-                title="Tóm tắt đoạn chat (AI)"
-                aria-label="Tóm tắt"
-              >
-                <Wand2 size={18} />
-              </button>
-              <button
-                type="button"
-                className={sentimentResult ? styles.chatActionActive : undefined}
-                onClick={handleAnalyzeSentiment}
-                disabled={isAnalyzingSentiment || !selectedConversationId}
-                data-tooltip="Analyze sentiment"
-                data-tooltip-description="Review conversation tone"
-                title="Phân tích cảm xúc (AI)"
-                aria-label="Phân tích cảm xúc"
-              >
-                <BrainCircuit size={18} />
-              </button>
-              <button type="button" onClick={() => handleStartCall('video')} disabled={callTargets.length === 0} title="Gọi video" aria-label="Gọi video">
-                <Video size={18} />
-              </button>
-              <button type="button" onClick={() => handleStartCall('voice')} disabled={callTargets.length === 0} title="Gọi thoại" aria-label="Gọi thoại">
-                <Phone size={18} />
-              </button>
-              <button type="button" onClick={() => setCallSettingsOpen(true)} title="Cài đặt cuộc gọi" aria-label="Cài đặt cuộc gọi">
-                <Info size={16} />
-              </button>
-              <button
-                type="button"
-                className={showMessageFilters || messageSearchKeyword ? styles.chatActionActive : undefined}
-                title="Tìm tin nhắn"
-                aria-label="Tìm tin nhắn"
-                disabled={!selectedConversation}
-                data-tooltip="Search"
-                data-tooltip-description="Find messages in this conversation"
-                onClick={() => setShowMessageFilters((value) => !value)}
-              >
-                <Search size={16} />
-              </button>
-              <button
-                type="button"
-                title="Thêm người vào cuộc trò chuyện"
-                aria-label="Thêm người vào cuộc trò chuyện"
+            <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto scrollbar-none md:w-full md:gap-1">
+              <button type="button"
+                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', chatSummary && 'bg-blue-50 text-blue-600')}
+                onClick={handleSummarizeChat} disabled={isSummarizing || !selectedConversationId}
+                data-tooltip="Summarize chat" data-tooltip-description="Create an AI summary"
+                title="Tóm tắt đoạn chat (AI)" aria-label="Tóm tắt"
+              ><Wand2 size={18} /></button>
+              <button type="button"
+                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', sentimentResult && 'bg-blue-50 text-blue-600')}
+                onClick={handleAnalyzeSentiment} disabled={isAnalyzingSentiment || !selectedConversationId}
+                data-tooltip="Analyze sentiment" data-tooltip-description="Review conversation tone"
+                title="Phân tích cảm xúc (AI)" aria-label="Phân tích cảm xúc"
+              ><BrainCircuit size={18} /></button>
+              <button type="button" onClick={() => handleStartCall('video')} disabled={callTargets.length === 0}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40" title="Gọi video" aria-label="Gọi video"><Video size={18} /></button>
+              <button type="button" onClick={() => handleStartCall('voice')} disabled={callTargets.length === 0}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40" title="Gọi thoại" aria-label="Gọi thoại"><Phone size={18} /></button>
+              <button type="button" onClick={() => setCallSettingsOpen(true)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100" title="Cài đặt cuộc gọi" aria-label="Cài đặt cuộc gọi"><Info size={16} /></button>
+              <button type="button"
+                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', (showMessageFilters || messageSearchKeyword) && 'bg-blue-50 text-blue-600')}
+                title="Tìm tin nhắn" aria-label="Tìm tin nhắn" disabled={!selectedConversation}
+                data-tooltip="Search" data-tooltip-description="Find messages in this conversation"
+                onClick={() => setShowMessageFilters((value) => !value)}><Search size={16} /></button>
+              <button type="button" title="Thêm người vào cuộc trò chuyện" aria-label="Thêm người vào cuộc trò chuyện"
                 disabled={!selectedGroup || !canAddMembers}
-                data-tooltip="Add Friend"
-                data-tooltip-description="Add people to this conversation"
-                onClick={() => {
-                  setRightPanelSection('manage')
-                  setShowSettingsDrawer(true)
-                }}
-              >
-                <UserPlus size={16} />
-              </button>
-              <button
-                type="button"
-                title="Xem chi tiết cuộc trò chuyện"
-                aria-label="Xem chi tiết cuộc trò chuyện"
-                className={showDetailsPanelDesktop ? styles.chatActionActive : undefined}
+                data-tooltip="Add Friend" data-tooltip-description="Add people to this conversation"
+                onClick={() => { setRightPanelSection('manage'); setShowSettingsDrawer(true) }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40"><UserPlus size={16} /></button>
+              <button type="button" title="Xem chi tiết cuộc trò chuyện" aria-label="Xem chi tiết cuộc trò chuyện"
+                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', showDetailsPanelDesktop && 'bg-blue-50 text-blue-600')}
                 disabled={!selectedConversation}
-                data-tooltip="Conversation Info"
-                data-tooltip-description="Open custom chat features"
-                onClick={() => {
-                  if (window.innerWidth > 1180) {
-                    setShowDetailsPanelDesktop(v => !v)
-                  } else {
-                    setRightPanelSection('overview')
-                    setShowSettingsDrawer(true)
-                  }
-                }}
-              >
-                <Info size={16} />
-              </button>
+                data-tooltip="Conversation Info" data-tooltip-description="Open custom chat features"
+                onClick={() => { if (window.innerWidth > 1180) setShowDetailsPanelDesktop(v => !v); else { setRightPanelSection('overview'); setShowSettingsDrawer(true) } }}
+              ><Info size={16} /></button>
             </div>
           </header>
 
           {showMessageFilters ? (
             <form
-              className={styles.messageFilters}
-              onSubmit={(event) => {
-                event.preventDefault()
-                setMessageSearchKeyword(messageSearchDraft.trim())
-              }}
+              className="flex shrink-0 items-center gap-2 border-b border-gray-100 px-3 py-2"
+              onSubmit={(event) => { event.preventDefault(); setMessageSearchKeyword(messageSearchDraft.trim()) }}
             >
-              <input
-                value={messageSearchDraft}
-                onChange={(event) => setMessageSearchDraft(event.target.value)}
-                placeholder="Tìm theo nội dung tin nhắn"
-                aria-label="Tìm theo nội dung tin nhắn"
-              />
-              <button type="submit">Tìm</button>
+              <input value={messageSearchDraft} onChange={(event) => setMessageSearchDraft(event.target.value)}
+                placeholder="Tìm theo nội dung tin nhắn" aria-label="Tìm theo nội dung tin nhắn"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-400" />
+              <button type="submit" className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">Tìm</button>
               {messageSearchKeyword ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMessageSearchDraft('')
-                    setMessageSearchKeyword('')
-                  }}
-                >
-                  Xóa tìm kiếm
-                </button>
+                <button type="button" onClick={() => { setMessageSearchDraft(''); setMessageSearchKeyword('') }}
+                  className="text-xs text-gray-500 hover:text-gray-700">Xóa tìm kiếm</button>
               ) : null}
             </form>
           ) : null}
 
           {selectedConversationId && messageLimitByConversation[selectedConversationId] ? (
-            <div className={styles.limitBadge}>
+            <div className="shrink-0 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
               Còn {messageLimitByConversation[selectedConversationId]?.remaining ?? 0}/{messageLimitByConversation[selectedConversationId]?.total ?? 3} tin nhắn miễn phí trước khi cần kết bạn.
             </div>
           ) : null}
 
           {chatSummary && (
-            <div className={`${styles.aiCard} ${chatSummaryCollapsed ? styles.aiCardCollapsed : ''}`}>
-              <div className={styles.aiCardHead}>
-                <span className={styles.aiCardTitle}>
-                  <Sparkles size={12} /> Tóm tắt AI
-                </span>
-                <div className={styles.aiCardControls}>
-                  <button
-                    type="button"
-                    className={styles.aiCardBtn}
-                    title={chatSummaryCollapsed ? 'Mở rộng' : 'Thu gọn'}
-                    onClick={() => setChatSummaryCollapsed(c => !c)}
-                  >
-                    <ChevronDown size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.aiCardBtn}
-                    title="Đóng"
-                    onClick={() => { setChatSummary(null); setChatSummaryCollapsed(false) }}
-                  >
-                    <X size={13} />
-                  </button>
+            <div className={`mx-2 mt-2 shrink-0 rounded-xl border border-blue-100 bg-blue-50/80 ${chatSummaryCollapsed ? 'max-h-10 overflow-hidden' : ''}`}>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-800"><Sparkles size={12} /> Tóm tắt AI</span>
+                <div className="flex items-center gap-1">
+                  <button type="button" className="flex h-6 w-6 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-100" title={chatSummaryCollapsed ? 'Mở rộng' : 'Thu gọn'} onClick={() => setChatSummaryCollapsed(c => !c)}><ChevronDown size={13} /></button>
+                  <button type="button" className="flex h-6 w-6 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-100" title="Đóng" onClick={() => { setChatSummary(null); setChatSummaryCollapsed(false) }}><X size={13} /></button>
                 </div>
               </div>
-              <div className={styles.aiCardBody}>{chatSummary}</div>
+              <div className="px-3 pb-2 text-xs text-gray-700">{chatSummary}</div>
             </div>
           )}
 
           {sentimentResult && (
-            <div
-              className={`${styles.aiCard} ${sentimentCollapsed ? styles.aiCardCollapsed : ''}`}
-              data-sentiment={sentimentResult.sentiment}
-            >
-              <div className={styles.aiCardHead}>
-                <span className={styles.aiCardTitle}>
+            <div className={`mx-2 mt-2 shrink-0 rounded-xl border border-blue-100 bg-blue-50/80 ${sentimentCollapsed ? 'max-h-10 overflow-hidden' : ''}`} data-sentiment={sentimentResult.sentiment}>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-800">
                   <BrainCircuit size={12} />
                   {sentimentResult.sentiment === 'positive' ? '✨ Tích cực' : sentimentResult.sentiment === 'negative' ? '🌧️ Tiêu cực' : '⚖️ Trung lập'}
-                  <span className={styles.aiCardScore}>{Math.round(sentimentResult.score * 100)}%</span>
+                  <span className="ml-1 text-blue-600">{Math.round(sentimentResult.score * 100)}%</span>
                 </span>
-                <div className={styles.aiCardControls}>
-                  <button
-                    type="button"
-                    className={styles.aiCardBtn}
-                    title={sentimentCollapsed ? 'Mở rộng' : 'Thu gọn'}
-                    onClick={() => setSentimentCollapsed(c => !c)}
-                  >
-                    <ChevronDown size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.aiCardBtn}
-                    title="Đóng"
-                    onClick={() => { setSentimentResult(null); setSentimentCollapsed(false) }}
-                  >
-                    <X size={13} />
-                  </button>
+                <div className="flex items-center gap-1">
+                  <button type="button" className="flex h-6 w-6 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-100" title={sentimentCollapsed ? 'Mở rộng' : 'Thu gọn'} onClick={() => setSentimentCollapsed(c => !c)}><ChevronDown size={13} /></button>
+                  <button type="button" className="flex h-6 w-6 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-100" title="Đóng" onClick={() => { setSentimentResult(null); setSentimentCollapsed(false) }}><X size={13} /></button>
                 </div>
               </div>
-              <div className={styles.aiCardBody}>
-                <div className={styles.aiScoreBar}>
-                  <div className={styles.aiScoreBarFill} style={{ width: `${sentimentResult.score * 100}%` }} />
+              <div className="px-3 pb-2 text-xs text-gray-700">
+                <div className="mb-1 h-1.5 w-full rounded-full bg-gray-200">
+                  <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${sentimentResult.score * 100}%` }} />
                 </div>
                 {sentimentResult.emotions && sentimentResult.emotions.length > 0 && (
-                  <div className={styles.aiEmotionTags}>
+                  <div className="mb-1 flex flex-wrap gap-1">
                     {sentimentResult.emotions.map((emo, idx) => (
-                      <span key={idx} className={styles.aiEmotionTag}>{emo}</span>
+                      <span key={idx} className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{emo}</span>
                     ))}
                   </div>
                 )}
-                <p className={styles.aiDetail}>"{sentimentResult.detail}"</p>
+                <p className="text-gray-600">"{sentimentResult.detail}"</p>
               </div>
             </div>
           )}
 
           {selectedConversation?.pinnedMessageIds && selectedConversation.pinnedMessageIds.length > 0 ? (
-            <div className={styles.pinnedBanner}>
+            <div className="shrink-0 bg-blue-50 px-3 py-1.5 text-xs text-blue-700">
               Đang ghim {selectedConversation.pinnedMessageIds.length} tin nhắn trong cuộc trò chuyện này.
             </div>
           ) : null}
 
           {selectedConversation?.pinnedMessageIds && selectedConversation.pinnedMessageIds.length > 0 ? (
-            <div className={styles.pinnedQuickList}>
+            <div className="shrink-0 flex gap-2 overflow-x-auto border-b border-gray-100 bg-amber-50/60 px-3 py-1.5">
               {selectedConversation.pinnedMessageIds.map((messageId) => {
                 const item = pinnedMessageMap.get(String(messageId))
                 return (
@@ -4675,11 +4331,11 @@ export default function MessagesPage() {
           ) : null}
 
           {directPeer ? (
-            <div className={styles.chatSocialBar}>
+            <div className="shrink-0 flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-3 py-2">
               {!isDirectPeerFriend && !isDirectPeerPending ? (
                 <button
                   type="button"
-                  className={styles.socialActionBtnPrimary}
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   onClick={handleRequestFriend}
                   disabled={Boolean(pendingFriendRequestTo[directPeer.id])}
                 >
@@ -4689,7 +4345,7 @@ export default function MessagesPage() {
               {!isDirectPeerFriend && isDirectPeerPending && isDirectPeerRequestedByMe ? (
                 <button
                   type="button"
-                  className={styles.socialActionBtn}
+                  className="rounded-lg bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 disabled:opacity-50"
                   onClick={handleCancelFriendRequest}
                   disabled={Boolean(pendingFriendRequestTo[directPeer.id])}
                 >
@@ -4699,7 +4355,7 @@ export default function MessagesPage() {
               {!isDirectPeerFriend && isDirectPeerPending && !isDirectPeerRequestedByMe ? (
                 <button
                   type="button"
-                  className={styles.socialActionBtnPrimary}
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   onClick={handleAcceptFriendRequestDirect}
                   disabled={Boolean(pendingFriendRequestTo[directPeer.id])}
                 >
@@ -4709,13 +4365,13 @@ export default function MessagesPage() {
             </div>
           ) : null}
 
-          {chatNotice ? <p className={styles.chatNotice}>{chatNotice}</p> : null}
+          {chatNotice ? <p className="shrink-0 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">{chatNotice}</p> : null}
 
           {(callStatus || incomingCall) && (
-            <div className={styles.callBanner}>
+            <div className="shrink-0 flex items-center justify-between bg-green-50 px-3 py-1.5">
               {callStatus ? <p>{callStatus}</p> : null}
               {incomingCall ? (
-                <div className={styles.callBannerActions}>
+                <div className="flex items-center gap-2">
                   <button type="button" onClick={() => void handleAcceptIncomingCall()} title="Chấp nhận cuộc gọi" aria-label="Chấp nhận cuộc gọi">
                     Chấp nhận
                   </button>
@@ -4724,7 +4380,7 @@ export default function MessagesPage() {
                   </button>
                 </div>
               ) : null}
-              <button type="button" className={styles.endCallBtn} onClick={handleEndCall} disabled={!activeCall && !incomingCall} title="Kết thúc cuộc gọi" aria-label="Kết thúc cuộc gọi">
+              <button type="button" className="flex items-center gap-1 rounded-lg bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600 disabled:opacity-50" onClick={handleEndCall} disabled={!activeCall && !incomingCall} title="Kết thúc cuộc gọi" aria-label="Kết thúc cuộc gọi">
                 <PhoneOff size={14} />
                 Kết thúc
               </button>
@@ -4732,7 +4388,7 @@ export default function MessagesPage() {
           )}
 
           {!selectedConversationId ? (
-            <div className={styles.noConversationPlaceholder}>
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-gray-400">
               <Send size={36} />
               <p>Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
             </div>
@@ -4763,14 +4419,14 @@ export default function MessagesPage() {
           )}
 
           {replySuggestions.length > 0 && (
-            <div className={styles.aiSuggestBar}>
-              <span className={styles.aiSuggestLabel}><Sparkles size={12} /> Gợi ý:</span>
-              <div className={styles.aiSuggestList}>
+            <div className="shrink-0 flex items-center gap-2 border-t border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1.5">
+              <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-blue-700"><Sparkles size={12} /> Gợi ý:</span>
+              <div className="flex flex-wrap gap-1.5">
                 {replySuggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    className={styles.aiSuggestBtn}
+                    className="rounded-full bg-white px-2.5 py-1 text-xs text-gray-600 shadow-sm hover:bg-blue-50 hover:text-blue-600"
                   onClick={() => { handleComposerMessageChange(suggestion); setReplySuggestions([]) }}
                   >
                     {suggestion}
@@ -4779,7 +4435,7 @@ export default function MessagesPage() {
               </div>
               <button
                 type="button"
-                className={styles.aiCardBtn}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600"
                 title="Đóng gợi ý"
                 onClick={() => setReplySuggestions([])}
               >
@@ -4818,7 +4474,7 @@ export default function MessagesPage() {
           {showJumpToLatest ? (
             <button
               type="button"
-              className={styles.jumpToLatestBtn}
+              className="absolute bottom-16 right-4 z-10 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-blue-600 shadow-lg hover:bg-blue-50"
               onClick={() => {
                 if (!messagesWrapRef.current) return
                 messagesWrapRef.current.scrollTop = messagesWrapRef.current.scrollHeight
@@ -4830,29 +4486,29 @@ export default function MessagesPage() {
           ) : null}
 
           {showNewMessageModal ? (
-            <div className={styles.overlayBackdrop}>
-              <div className={styles.overlayCard}>
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+              <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
                 <h3>Tin nhắn mới</h3>
                 <input
                   value={newMessageKeyword}
                   onChange={(event) => setNewMessageKeyword(event.target.value)}
                   placeholder="Nhập tên bạn bè hoặc email đăng ký"
                 />
-                <div className={styles.overlayList}>
+                <div className="max-h-60 space-y-1 overflow-y-auto">
                   {searchUsersResult.map((item) => (
                     <button key={item.id} type="button" onClick={() => handleCreateConversationWithUser(item.id)} title={`Tạo hội thoại với ${item.name}`} aria-label={`Tạo hội thoại với ${item.name}`}>
-                      <span className={styles.listEntryIdentity}>
-                        <span className={styles.listEntryAvatar}>{getAvatarInitial(item.name)}</span>
-                        <span className={styles.listEntryMeta}>
-                          <strong className={styles.listEntryTitle}>{item.name}</strong>
-                          <small className={styles.listEntrySubtitle}>ID {item.id}</small>
+                      <span className="flex items-center gap-2.5">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(item.name)}</span>
+                        <span className="min-w-0">
+                          <strong className="block truncate text-sm font-semibold text-gray-900">{item.name}</strong>
+                          <small className="block truncate text-xs text-gray-500">ID {item.id}</small>
                         </span>
                       </span>
                     </button>
                   ))}
                   {searchUsersResult.length === 0 ? <p>Không có kết quả phù hợp.</p> : null}
                 </div>
-                <button type="button" className={styles.overlayCloseBtn} onClick={() => setShowNewMessageModal(false)} title="Đóng" aria-label="Đóng">
+                <button type="button" className="w-full rounded-xl bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50" onClick={() => setShowNewMessageModal(false)} title="Đóng" aria-label="Đóng">
                   Đóng
                 </button>
               </div>
@@ -4860,22 +4516,22 @@ export default function MessagesPage() {
           ) : null}
 
           {showCallHistoryDrawer ? (
-            <div className={styles.overlayBackdrop}>
-              <div className={styles.overlayCard}>
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+              <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
                 <h3>Lịch sử cuộc gọi</h3>
-                <div className={styles.notifyActions}>
+                <div className="flex items-center gap-2 pl-11">
                   {(['all', 'missed', 'incoming', 'outgoing', 'group'] as const).map((filter) => (
                     <button
                       key={filter}
                       type="button"
-                      className={callHistoryFilter === filter ? styles.notifyAcceptBtn : undefined}
+                      className={callHistoryFilter === filter ? 'rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50' : undefined}
                       onClick={() => setCallHistoryFilter(filter)}
                     >
                       {filter === 'all' ? 'Gần đây' : filter === 'missed' ? 'Nhỡ' : filter === 'incoming' ? 'Đến' : filter === 'outgoing' ? 'Đi' : 'Nhóm'}
                     </button>
                   ))}
                 </div>
-                <div className={styles.overlayList}>
+                <div className="max-h-60 space-y-1 overflow-y-auto">
                   {filteredCallHistory.map((item) => {
                     const outgoing = item.initiatorId === user?.id
                     const conv = conversations.find((conversation) => conversation.id === item.conversationId)
@@ -4890,22 +4546,22 @@ export default function MessagesPage() {
                             ? 'Đã hủy'
                             : 'Thất bại'
                     return (
-                      <div key={item.id} className={styles.notifyCard}>
-                        <button type="button" className={styles.notifyMainBtn} onClick={() => handleOpenConversation(item.conversationId)}>
-                          <span className={styles.listEntryIdentity}>
-                            <span className={styles.listEntryAvatar}>{item.callType === 'video' ? 'V' : 'P'}</span>
-                            <span className={styles.listEntryMeta}>
-                              <strong className={styles.listEntryTitle}>{title}</strong>
-                              <span className={styles.listEntrySubtitle}>
+                      <div key={item.id} className="rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50">
+                        <button type="button" className="flex w-full items-center gap-2.5 text-left" onClick={() => handleOpenConversation(item.conversationId)}>
+                          <span className="flex items-center gap-2.5">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{item.callType === 'video' ? 'V' : 'P'}</span>
+                            <span className="min-w-0">
+                              <strong className="block truncate text-sm font-semibold text-gray-900">{title}</strong>
+                              <span className="block truncate text-xs text-gray-500">
                                 {outgoing ? 'Gọi đi' : 'Gọi đến'} · {item.mode === 'group' ? 'Nhóm' : '1-1'} · {statusLabel}
                               </span>
-                              <small className={styles.listEntrySubtitle}>
+                              <small className="block truncate text-xs text-gray-500">
                                 {new Date(item.createdAt || item.startedAt).toLocaleString('vi-VN')} · {formatCallDuration(item.durationSec || 0)}
                               </small>
                             </span>
                           </span>
                         </button>
-                        <div className={styles.notifyActions}>
+                        <div className="flex items-center gap-2 pl-11">
                           <button type="button" onClick={() => handleOpenConversation(item.conversationId)}>Mở chat</button>
                           <button type="button" onClick={() => {
                             handleOpenConversation(item.conversationId)
@@ -4921,7 +4577,7 @@ export default function MessagesPage() {
                   })}
                   {filteredCallHistory.length === 0 ? <p>Chưa có lịch sử cuộc gọi phù hợp.</p> : null}
                 </div>
-                <button type="button" className={styles.overlayCloseBtn} onClick={() => setShowCallHistoryDrawer(false)} title="Đóng" aria-label="Đóng">
+                <button type="button" className="w-full rounded-xl bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50" onClick={() => setShowCallHistoryDrawer(false)} title="Đóng" aria-label="Đóng">
                   Đóng
                 </button>
               </div>
@@ -4929,11 +4585,11 @@ export default function MessagesPage() {
           ) : null}
 
           {showNotificationsDrawer ? (
-            <div className={styles.overlayBackdrop}>
-              <div className={`${styles.overlayCard} ${styles.notificationsCenter}`}>
-                <div className={styles.notificationsHeader}>
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+              <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
                   <h3>Thông báo <span>{notifications.length}</span></h3>
-                  <div className={styles.notificationsHeaderActions}>
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       disabled={!notifications.some((item) => !item.is_read)}
@@ -4944,12 +4600,12 @@ export default function MessagesPage() {
                     >
                       Đánh dấu đã đọc
                     </button>
-                    <button type="button" className={styles.notificationsCloseBtn} onClick={() => setShowNotificationsDrawer(false)} title="Đóng" aria-label="Đóng">
+                    <button type="button" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setShowNotificationsDrawer(false)} title="Đóng" aria-label="Đóng">
                       ×
                     </button>
                   </div>
                 </div>
-                <div className={`${styles.overlayList} ${styles.notificationsList}`}>
+                <div className="flex-1 overflow-y-auto px-3 py-2">
                   {notifications.map((item) => {
                     const meta = parseNotificationMeta(item)
                     const conversationId = meta?.conversationId
@@ -4958,24 +4614,24 @@ export default function MessagesPage() {
                     const senderName = item.title?.replace(/^new message:?/i, '').trim() || item.title || 'ZChat'
                     const preview = item.body || 'Thông báo hệ thống'
                     return (
-                      <div key={item.id} className={cn(styles.notifyCard, isUnread && styles.notifyCardUnread)}>
-                        <button type="button" className={styles.notifyMainBtn} onClick={() => handleOpenNotificationConversation(conversationId, item.id)}>
-                          <span className={styles.notifyAvatar}>{getAvatarInitial(senderName)}</span>
-                          <span className={styles.notifyContent}>
-                            <span className={styles.notifyTopLine}>
+                      <div key={item.id} className={cn('rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-50', isUnread && 'bg-blue-50/40')}>
+                        <button type="button" className="flex w-full items-center gap-2.5 text-left" onClick={() => handleOpenNotificationConversation(conversationId, item.id)}>
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(senderName)}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-baseline justify-between gap-2">
                               <strong>{senderName}</strong>
                               <small>{formatRelativeTime(item.created_at)}</small>
                             </span>
-                            <span className={styles.notifyPreview}>{preview}</span>
+                            <span className="block truncate text-xs text-gray-500">{preview}</span>
                           </span>
-                          {isUnread ? <span className={styles.notifyUnreadDot} aria-label="Chưa đọc" /> : null}
-                          <span className={styles.notifyArrow} aria-hidden="true">→</span>
+                          {isUnread ? <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Chưa đọc" /> : null}
+                          <span className="shrink-0 text-gray-400" aria-hidden="true">→</span>
                         </button>
                         {canAccept ? (
-                          <div className={styles.notifyActions}>
+                          <div className="flex items-center gap-2 pl-11">
                             <button
                               type="button"
-                              className={styles.notifyAcceptBtn}
+                              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                               disabled={busyActionId === `notif-${item.id}`}
                               onClick={() => {
                                 void handleAcceptFromNotification(item)
@@ -4995,26 +4651,26 @@ export default function MessagesPage() {
           ) : null}
 
           {forwardingMessageId ? (
-            <div className={styles.forwardDialogBackdrop}>
-              <div className={styles.forwardDialog}>
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+              <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
                 <h3>Chuyển tiếp tin nhắn</h3>
                 <p>Chọn cuộc trò chuyện để chuyển tiếp:</p>
-                <div className={styles.forwardList}>
+                <div className="max-h-52 space-y-1 overflow-y-auto">
                   {conversations
                     .filter((conv) => conv.id !== selectedConversationId)
                     .map((conv) => (
                       <button key={conv.id} type="button" onClick={() => handleForward(conv.id)} title={`Chuyển tiếp đến ${getConversationDisplayName(conv, user?.id)}`} aria-label={`Chuyển tiếp đến ${getConversationDisplayName(conv, user?.id)}`}>
-                        <span className={styles.listEntryIdentity}>
-                          <span className={styles.listEntryAvatar}>{getAvatarInitial(getConversationDisplayName(conv, user?.id))}</span>
-                          <span className={styles.listEntryMeta}>
-                            <strong className={styles.listEntryTitle}>{getConversationDisplayName(conv, user?.id)}</strong>
-                            <small className={styles.listEntrySubtitle}>ID {conv.id}</small>
+                        <span className="flex items-center gap-2.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(getConversationDisplayName(conv, user?.id))}</span>
+                          <span className="min-w-0">
+                            <strong className="block truncate text-sm font-semibold text-gray-900">{getConversationDisplayName(conv, user?.id)}</strong>
+                            <small className="block truncate text-xs text-gray-500">ID {conv.id}</small>
                           </span>
                         </span>
                       </button>
                     ))}
                 </div>
-                <button type="button" className={styles.forwardCancel} onClick={() => setForwardingMessageId(null)} title="Hủy chuyển tiếp" aria-label="Hủy chuyển tiếp">
+                <button type="button" className="w-full rounded-xl bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200" onClick={() => setForwardingMessageId(null)} title="Hủy chuyển tiếp" aria-label="Hủy chuyển tiếp">
                   Hủy
                 </button>
               </div>
@@ -5022,8 +4678,8 @@ export default function MessagesPage() {
           ) : null}
 
           {showCreateGroupModal ? (
-            <div className={styles.overlayBackdrop}>
-              <div className={styles.overlayCard}>
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+              <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
                 <h3>Tạo nhóm chat</h3>
                 <input
                   value={groupName}
@@ -5035,16 +4691,16 @@ export default function MessagesPage() {
                   onChange={(event) => setGroupSearchKeyword(event.target.value)}
                   placeholder="Tìm bạn bè để thêm vào nhóm"
                 />
-                <div className={styles.overlayList}>
+                <div className="max-h-60 space-y-1 overflow-y-auto">
                   {filteredCreateGroupInviteCandidates.map((friend) => {
                     const checked = groupMemberIds.includes(friend.id)
                     return (
                       <button key={friend.id} type="button" onClick={() => toggleGroupMember(friend.id)} title={`Chọn ${friend.fullName}`} aria-label={`Chọn ${friend.fullName}`}>
-                        <span className={styles.listEntryIdentity}>
-                          <span className={styles.listEntryAvatar}>{getAvatarInitial(friend.fullName)}</span>
-                          <span className={styles.listEntryMeta}>
-                            <strong className={styles.listEntryTitle}>{checked ? '✓ ' : ''}{friend.fullName}</strong>
-                            <span className={styles.listEntrySubtitle}>{friend.username ? `@${friend.username}` : friend.email || friend.phone || `ID ${friend.id}`}</span>
+                        <span className="flex items-center gap-2.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(friend.fullName)}</span>
+                          <span className="min-w-0">
+                            <strong className="block truncate text-sm font-semibold text-gray-900">{checked ? '✓ ' : ''}{friend.fullName}</strong>
+                            <span className="block truncate text-xs text-gray-500">{friend.username ? `@${friend.username}` : friend.email || friend.phone || `ID ${friend.id}`}</span>
                           </span>
                         </span>
                       </button>
@@ -5055,13 +4711,13 @@ export default function MessagesPage() {
                 </div>
                 <button
                   type="button"
-                  className={styles.overlayCloseBtn}
+                  className="w-full rounded-xl bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
                   disabled={!groupName.trim() || groupMemberIds.length === 0 || creatingGroup}
                   onClick={handleCreateGroupConversation}
                 >
                   {creatingGroup ? 'Đang tạo nhóm...' : 'Tạo nhóm'}
                 </button>
-                <button type="button" className={styles.overlayCloseBtn} onClick={() => setShowCreateGroupModal(false)} title="Đóng" aria-label="Đóng">
+                <button type="button" className="w-full rounded-xl bg-gray-100 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50" onClick={() => setShowCreateGroupModal(false)} title="Đóng" aria-label="Đóng">
                   Đóng
                 </button>
               </div>
@@ -5069,8 +4725,8 @@ export default function MessagesPage() {
           ) : null}
 
           {jitsiCallUrl ? (
-            <section className={styles.jitsiCallWindow} aria-label="Cuộc gọi video đang diễn ra">
-              <header className={styles.jitsiCallHeader}>
+            <section className="fixed inset-0 z-50 flex flex-col bg-black" aria-label="Cuộc gọi video đang diễn ra">
+              <header className="flex items-center justify-between bg-gray-900 px-4 py-2 text-white">
                 <div>
                   <strong>Cuộc gọi video</strong>
                   <span>{callStatus || 'Đang kết nối'}</span>
@@ -5092,7 +4748,7 @@ export default function MessagesPage() {
                 </button>
               </header>
               <iframe
-                className={styles.jitsiCallFrame}
+                className="flex-1 w-full border-0"
                 src={jitsiCallUrl}
                 title="Cuộc gọi video"
                 allow="camera; microphone; fullscreen; display-capture; autoplay"
@@ -5123,22 +4779,22 @@ export default function MessagesPage() {
           ) : null}
 
           {false && activeCall ? (
-            <div className={styles.callOverlay}>
-              <div className={styles.callBackdropGlow} />
-              <div className={styles.callTopBar}>
+            <div className="fixed inset-0 z-50 bg-gray-900">
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30" />
+              <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-4 py-3 text-white">
                 <div>
                   <small>Call in progress</small>
                   <h3>{activeCall!.withName}</h3>
-                  <p className={styles.callParticipantCount}>
+                  <p className="text-xs text-gray-400">
                     {callParticipantProfiles.length} người đang tham gia
                   </p>
                 </div>
-                <div className={styles.callBadge}>{callAnswered ? formattedCallTime : 'Đổ chuông...'}</div>
+                <div className="rounded-full bg-white/20 px-3 py-1 text-sm">{callAnswered ? formattedCallTime : 'Đổ chuông...'}</div>
               </div>
               {callParticipantProfiles.length > 0 ? (
-                <div className={styles.callParticipantList}>
+                <div className="flex gap-2 overflow-x-auto px-4">
                   {callParticipantProfiles.map((member) => (
-                    <div key={member.userId} className={styles.callParticipantItem}>
+                    <div key={member.userId} className="flex flex-col items-center gap-1 text-white">
                       {member.avatarUrl ? (
                         <img src={member.avatarUrl} alt={member.name} />
                       ) : (
@@ -5149,11 +4805,11 @@ export default function MessagesPage() {
                   ))}
                 </div>
               ) : null}
-              <div className={styles.callMainVideo}>
+              <div className="flex flex-1 items-center justify-center">
                 {remoteStreams.length > 0 ? (
-                  <div className={styles.remoteGrid}>
+                  <div className="grid grid-cols-2 gap-2">
                     {remoteStreams.map((item) => (
-                      <div key={item.userId} className={styles.remoteVideoCard}>
+                      <div key={item.userId} className="relative aspect-video rounded-lg overflow-hidden bg-gray-800">
                         <video
                           autoPlay
                           playsInline
@@ -5162,21 +4818,21 @@ export default function MessagesPage() {
                             node.srcObject = item.stream
                           }}
                         />
-                        <span className={styles.remoteVideoLabel}>
+                        <span className="absolute bottom-1 left-2 text-xs text-white/80">
                           {callParticipantProfiles.find((member) => member.userId === item.userId)?.name || `Người dùng #${item.userId}`}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className={styles.callAvatarBig}>{(activeCall!.withName[0] || 'U').toUpperCase()}</div>
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-700 text-4xl text-white">{(activeCall!.withName[0] || 'U').toUpperCase()}</div>
                 )}
               </div>
-              <div className={styles.callMiniVideo}>
-                <video ref={localVideoRef} autoPlay muted playsInline className={styles.localVideo} />
+              <div className="absolute bottom-20 right-4 h-32 w-24 rounded-lg overflow-hidden border-2 border-white">
+                <video ref={localVideoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
                 <span>Bạn</span>
               </div>
-              <div className={styles.callControls}>
+              <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-4 bg-gradient-to-t from-black/60 to-transparent px-4 py-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -5212,7 +4868,7 @@ export default function MessagesPage() {
                 <button type="button" title="Mời người khác" aria-label="Mời người khác">
                   <UserPlus size={16} />
                 </button>
-                <button type="button" className={styles.endCallOverlayBtn} onClick={handleEndCall} title="Kết thúc cuộc gọi" aria-label="Kết thúc cuộc gọi">
+                <button type="button" className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600" onClick={handleEndCall} title="Kết thúc cuộc gọi" aria-label="Kết thúc cuộc gọi">
                   <PhoneOff size={16} />
                 </button>
               </div>
@@ -5220,10 +4876,10 @@ export default function MessagesPage() {
           ) : null}
 
           {actionMenu && activeActionMessage ? (
-            <div ref={actionMenuRef} className={styles.actionMenu} style={{ left: actionMenu.x, top: actionMenu.y }}>
-              <div className={styles.actionMenuHeader}>
-                <span className={styles.listEntryAvatar}>{getAvatarInitial(getSenderName(activeActionMessage.senderId, activeActionMessage))}</span>
-                <div className={styles.actionMenuMeta}>
+            <div ref={actionMenuRef} className="fixed z-50 w-52 rounded-xl border border-gray-200 bg-white py-1 shadow-xl" style={{ left: actionMenu.x, top: actionMenu.y }}>
+              <div className="flex items-center gap-2.5 border-b border-gray-100 px-3 py-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(getSenderName(activeActionMessage.senderId, activeActionMessage))}</span>
+                <div className="min-w-0">
                   <strong>{getSenderName(activeActionMessage.senderId, activeActionMessage)}</strong>
                   <small>{formatVietnamTime(activeActionMessage.createdAt)}</small>
                 </div>
@@ -5266,65 +4922,24 @@ export default function MessagesPage() {
           ) : null}
 
           {reactionPicker && activeReactionMessage ? (
-            <div
-              ref={reactionPickerRef}
-              className={`${styles.reactionPicker} ${reactionPicker.placement === 'above' ? styles.reactionPickerAbove : styles.reactionPickerBelow}`}
-              role="toolbar"
-              aria-label="Chọn cảm xúc"
-              onKeyDown={(event) => {
-                if (!reactionPickerRef.current) return
-                const buttons = Array.from(reactionPickerRef.current.querySelectorAll('button')) as HTMLButtonElement[]
-                if (buttons.length === 0) return
-                const currentIndex = buttons.findIndex((btn) => btn === document.activeElement)
-                if (event.key === 'Escape') {
-                  event.preventDefault()
-                  setReactionPicker(null)
-                  return
-                }
-                if (event.key === 'ArrowRight') {
-                  event.preventDefault()
-                  const nextIndex = (currentIndex + 1) % buttons.length
-                  buttons[nextIndex]?.focus()
-                }
-                if (event.key === 'ArrowLeft') {
-                  event.preventDefault()
-                  const nextIndex = currentIndex <= 0 ? buttons.length - 1 : currentIndex - 1
-                  buttons[nextIndex]?.focus()
-                }
-              }}
-            >
-              {MESSAGE_REACTION_ICONS.map((reaction) => (
-                <button
-                  key={reaction.type}
-                  type="button"
-                  className={activeReactionMessage.viewerReaction === reaction.type ? styles.reactionPickerActive : ''}
-                  title={reaction.label}
-                  aria-label={reaction.label}
-                  disabled={busyActionId === activeReactionMessage.id}
-                  onClick={() => {
-                    void handleReaction(activeReactionMessage, reaction.type)
-                    setReactionPicker(null)
-                  }}
-                >
-                  <span className={styles.reactionPickerGlyph}>{reaction.emoji}</span>
-                </button>
-              ))}
-            </div>
+            <ReactionPicker
+              reactionPickerRef={reactionPickerRef}
+              activeReactionMessage={activeReactionMessage}
+              busyActionId={busyActionId}
+              placement={reactionPicker.placement}
+              onReact={handleReaction}
+              onClose={() => setReactionPicker(null)}
+            />
           ) : null}
         </section>
 
         {mediaLightbox ? (
-          <div className={styles.mediaLightbox} role="dialog" aria-modal="true" aria-label="Xem ảnh" onClick={() => setMediaLightbox(null)}>
-            <button type="button" className={styles.mediaLightboxClose} onClick={() => setMediaLightbox(null)} aria-label="Đóng">
-              <X size={20} />
-            </button>
-            <img src={mediaLightbox.url} alt={mediaLightbox.alt} onClick={(event) => event.stopPropagation()} />
-          </div>
+          <MediaLightbox url={mediaLightbox.url} alt={mediaLightbox.alt} onClose={() => setMediaLightbox(null)} />
         ) : null}
 
-        {showSettingsDrawer ? <button type="button" className={styles.settingsBackdrop} aria-label="Đóng cài đặt hội thoại" onClick={() => setShowSettingsDrawer(false)} /> : null}
-        <aside className={`${styles.detailsPanel}${showSettingsDrawer ? ` ${styles.detailsPanelOpen}` : ''}${!showDetailsPanelDesktop ? ` ${styles.detailsPanelHidden}` : ''}`}>
-          <div className={styles.detailsBody}>
+        {showSettingsDrawer ? <button type="button" className="fixed inset-0 z-40 bg-black/20 md:hidden" aria-label="Đóng cài đặt hội thoại" onClick={() => setShowSettingsDrawer(false)} /> : null}
+        <aside className={`hidden lg:flex w-80 shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white transition-transform duration-300${showSettingsDrawer ? ' flex' : ''}${!showDetailsPanelDesktop ? ' hidden' : ''}`}>
+          <div className="flex-1 overflow-y-auto">
           <ConversationDetailsPanel
             selectedConversation={selectedConversation}
             selectedGroup={selectedGroup}
@@ -5399,9 +5014,9 @@ export default function MessagesPage() {
           <CallSettingsPanel settings={callSettings} onChange={setCallSettings} />
         </AppDialog>
         {pendingLockedConversationId ? (
-          <div className={styles.lockGateOverlay} role="dialog" aria-modal="true" aria-labelledby="unlock-conversation-title">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-labelledby="unlock-conversation-title">
             <form
-              className={styles.lockGateCard}
+              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
               onSubmit={(event) => {
                 event.preventDefault()
                 void handleSubmitPendingUnlock()
@@ -5411,7 +5026,7 @@ export default function MessagesPage() {
               <p>
                 Hội thoại này đang bị khóa trên thiết bị của bạn. Mở khóa để tiếp tục xem nội dung và nhận tin nhắn.
               </p>
-              <label className={styles.lockGateField}>
+              <label className="mb-3 block">
                 <span>Mật khẩu khóa</span>
                 <input
                   type="password"
@@ -5424,8 +5039,8 @@ export default function MessagesPage() {
                   placeholder="Nhập mật khẩu"
                 />
               </label>
-              {pendingUnlockError ? <small className={styles.lockGateError}>{pendingUnlockError}</small> : null}
-              <div className={styles.lockGateActions}>
+              {pendingUnlockError ? <small className="block text-xs text-red-500">{pendingUnlockError}</small> : null}
+              <div className="mt-4 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => {
