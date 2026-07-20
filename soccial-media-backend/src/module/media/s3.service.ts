@@ -49,26 +49,11 @@ export class S3Service {
     );
   }
 
-  async getSignedUrl(key: string, expiresIn = 3600): Promise<string> {
+  async getObjectStream(key: string) {
     if (!this.client) throw new Error('S3 not configured');
 
-    return getSignedUrl(
-      this.client,
+    return this.client.send(
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn },
     );
-  }
-
-  async getSignedUrlOrFallback(
-    key: string,
-    fallbackPath: string,
-    expiresIn = 3600,
-  ): Promise<string> {
-    if (!this.client) return fallbackPath;
-    try {
-      return await this.getSignedUrl(key, expiresIn);
-    } catch {
-      return fallbackPath;
-    }
   }
 }

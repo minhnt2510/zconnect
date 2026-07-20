@@ -65,9 +65,13 @@ async function bootstrap() {
       const key = `uploads${req.path}`;
       if (!key) return next();
       try {
-        const url = await s3Service.getSignedUrl(key, 3600);
-        return res.redirect(url);
-      } catch {
+        const result = await s3Service.getObjectStream(key);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        if (result.ContentType) res.setHeader('Content-Type', result.ContentType);
+        if (result.ContentLength) res.setHeader('Content-Length', String(result.ContentLength));
+        (result.Body as any).pipe(res);
+      } catch (err) {
+        console.error('S3 proxy error for', key, err);
         next();
       }
     });
