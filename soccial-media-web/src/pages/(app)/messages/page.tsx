@@ -4116,8 +4116,9 @@ export default function MessagesPage() {
     return diffDays < 7 ? `${diffDays} ngày trước` : new Date(value).toLocaleDateString('vi-VN')
   }
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-white md:flex-row">
-      <div className={`flex min-h-0 flex-1 ${isMobileViewport && mobileShowList ? '' : ''} ${!showDetailsPanelDesktop ? '' : ''}`}>
+    <div className="flex h-dvh w-full bg-white">
+      {/* Sidebar: full width on mobile when list is shown, hidden when chat is open */}
+      <div className={`flex min-w-0 ${isMobileViewport ? (mobileShowList ? 'w-full' : 'hidden') : ''} ${!isMobileViewport ? 'md:flex' : ''}`}>
         <MessagesSidebar
           initials={initials}
           userId={user?.id}
@@ -4168,14 +4169,12 @@ export default function MessagesPage() {
             setGroupMemberIds([])
           }}
         />
+      </div>
+      {/* End sidebar — start chat panel */}
 
-        {chatPanelThemeStyle ? <style>{chatPanelThemeStyle}</style> : null}
-        <section
-          className={[
-            'relative flex min-h-0 flex-1 flex-col overflow-hidden',
-            selectedConversationUiPrefs.largeText ? 'text-base' : '',
-            selectedConversationUiPrefs.roundBubbles ? '' : '',
-          ].filter(Boolean).join(' ')}
+      {chatPanelThemeStyle ? <style>{chatPanelThemeStyle}</style> : null}
+      <section
+        className={`relative flex flex-1 flex-col min-w-0 overflow-hidden ${isMobileViewport && mobileShowList ? 'hidden' : ''} ${selectedConversationUiPrefs.largeText ? 'text-base' : ''}`}
         >
           <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 px-3 py-2.5 md:flex-wrap">
             <button type="button" className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 md:hidden" onClick={() => setMobileShowList(true)} aria-label="Quay lại danh sách">
@@ -5160,7 +5159,6 @@ export default function MessagesPage() {
           onSubmit={handleSubmitAutoDelete}
         />
       </div>
-    </div>
   )
 }
 
