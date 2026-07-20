@@ -11,6 +11,7 @@
 } from '@/types'
 import { API_BASE, BACKEND_ORIGIN } from '@/config/api'
 import { useAuthStore } from '@/contexts/auth-store'
+import { refreshSocketAuth } from '@/services/socket'
 
 export type CallHistoryItem = {
   id: string
@@ -292,6 +293,7 @@ const refreshAccessToken = async () => {
         refreshToken: data.refreshToken,
         user: normalizeUser(data.user),
       })
+      refreshSocketAuth(data.accessToken)
       return data.accessToken
     } catch {
       return null
@@ -953,8 +955,9 @@ export const api = {
     }, token),
 
   notifications: (token: string) =>
-    request<{ notifications: NotificationItem[] }>('/social/notifications', { method: 'GET' }, token).then((res) => ({
+    request<{ notifications: NotificationItem[]; unreadCount?: number }>('/social/notifications', { method: 'GET' }, token).then((res) => ({
       notifications: (res.notifications || []).map((item) => normalizeNotification(item as NotificationItem & Record<string, unknown>)),
+      unreadCount: typeof res.unreadCount === 'number' ? res.unreadCount : undefined,
     })),
 
   readNotification: (token: string, id: number | string) =>

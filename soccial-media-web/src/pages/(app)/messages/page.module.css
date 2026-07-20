@@ -1319,6 +1319,14 @@
   min-height: 40px;
   min-width: 0;
   gap: 0.3rem;
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.composerRow::-webkit-scrollbar {
+  display: none;
 }
 
 .composerIconBtn,
@@ -5383,6 +5391,14 @@
 
 .composerRow {
   gap: 8px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.composerRow::-webkit-scrollbar {
+  display: none;
 }
 
 .composerTextarea {
@@ -5446,6 +5462,7 @@
 
   .composerTextarea {
     min-height: 44px;
+    min-width: 80px;
     font-size: 16px;
   }
 

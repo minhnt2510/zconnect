@@ -55,6 +55,12 @@ export class NotificationService {
     });
   }
 
+  async countUnread(userId: number) {
+    return this.notifRepo.count({
+      where: { userId: String(userId), isRead: false } as any,
+    });
+  }
+
   async markRead(id: string) {
     await this.notifRepo.update(
       { _id: this.toObjectId(id) } as any,

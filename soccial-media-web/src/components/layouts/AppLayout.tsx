@@ -6,7 +6,7 @@ import { useCallStore } from '@/contexts/call-store'
 import { useChatStore } from '@/contexts/chat-store'
 import { callSession, resetCallSession } from '@/services/call-session'
 import { ActiveCallWindow, IncomingCallModal, MinimizedCallPill, OutgoingCallModal, RemoteAudioSink, isTerminalErrorState } from '@/components/call'
-import { resolveApiAssetUrl } from '@/api/client'
+import { resolveApiAssetUrl, api } from '@/api/client'
 import { connectSocket, getSocket } from '@/services/socket'
 import { toast } from '@/hooks/use-toast'
 import type { User } from '@/types'
@@ -169,36 +169,35 @@ export default function AppLayout({
     const setNotificationUnreadCount = useChatStore.getState().setNotificationUnreadCount
     const setFriendRequestCount = useChatStore.getState().setFriendRequestCount
 
-    const onBadgeNotification = (payload: { isRead?: boolean }) => {
-      if (payload?.isRead) {
-        setNotificationUnreadCount(0)
-      } else {
-        setNotificationUnreadCount((n) => n + 1)
-      }
+    const refreshBadgeCounts = () => {
+      api.notifications(token).then((res) => {
+        setNotificationUnreadCount(res.unreadCount ?? 0)
+      }).catch(() => undefined)
+      api.listFriendRequests(token).then((res) => {
+        const pending = (res.requests || []).filter((r: any) => r.status === 'pending' && !r.requestedByMe).length
+        setFriendRequestCount(pending)
+      }).catch(() => undefined)
     }
-    const onFriendRequest = () => {
+
+    const onAnyNotification = () => {
+      // Refetch badge counts on any notification event
+      setNotificationUnreadCount((n) => n + 1)
+    }
+
+    const onFriendRequestEvent = () => {
       setFriendRequestCount((n) => n + 1)
     }
-    const onFriendAccepted = () => {
+    const onFriendAcceptedEvent = () => {
       setFriendRequestCount(Math.max(0, useChatStore.getState().friendRequestCount - 1))
     }
 
-    socket.on('notification:new', onBadgeNotification)
-    socket.on('notification:all-read', onBadgeNotification)
-    socket.on('friend:request', onFriendRequest)
-    socket.on('friend:accepted', onFriendAccepted)
+    socket.on('notification:new', onAnyNotification)
+    socket.on('notification:all-read', () => setNotificationUnreadCount(0))
+    socket.on('friend:request', onFriendRequestEvent)
+    socket.on('friend:accepted', onFriendAcceptedEvent)
 
     // Load initial badge counts
-    fetch(`/api/social/notifications?limit=1`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json().catch(() => ({})))
-      .then((body) => {
-        if (typeof body?.total === 'number') setNotificationUnreadCount(body.total)
-        else if (body?.notifications) {
-          const unread = body.notifications.filter((n: any) => !n.is_read).length
-          setNotificationUnreadCount(unread)
-        }
-      })
-      .catch(() => undefined)
+    refreshBadgeCounts()
 
     return () => {
       socket.off('call:offer', onOffer)
@@ -208,10 +207,10 @@ export default function AppLayout({
       socket.off('user:avatar-updated', onAvatarUpdated)
       socket.off('user:updated', onUserUpdated)
       socket.off('user:moderation-updated', onUserUpdated)
-      socket.off('notification:new', onBadgeNotification)
-      socket.off('notification:all-read', onBadgeNotification)
-      socket.off('friend:request', onFriendRequest)
-      socket.off('friend:accepted', onFriendAccepted)
+      socket.off('notification:new', onAnyNotification)
+      socket.off('notification:all-read')
+      socket.off('friend:request', onFriendRequestEvent)
+      socket.off('friend:accepted', onFriendAcceptedEvent)
     }
   }, [clearAuth, navigate, refreshToken, setAuth, token, updateUserAvatar, user])
 

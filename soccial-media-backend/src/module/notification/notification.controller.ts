@@ -17,11 +17,13 @@ export class NotificationController {
   @Get('notifications')
   @UseGuards(JwtAuthGuard)
   async listNotifications(@Req() req: any) {
-    const notifications = await this.notificationService.findByUser(
-      req.user.sub,
-    );
+    const [notifications, unreadCount] = await Promise.all([
+      this.notificationService.findByUser(req.user.sub),
+      this.notificationService.countUnread(req.user.sub),
+    ]);
     return {
       total: notifications.length,
+      unreadCount,
       notifications: notifications.map((n) => ({
         id: String(n._id),
         userId: n.userId,
@@ -35,6 +37,13 @@ export class NotificationController {
         createdAt: n.createdAt?.toISOString?.() ?? new Date().toISOString(),
       })),
     };
+  }
+
+  @Get('notifications/unread-count')
+  @UseGuards(JwtAuthGuard)
+  async getUnreadCount(@Req() req: any) {
+    const count = await this.notificationService.countUnread(req.user.sub);
+    return { unreadCount: count };
   }
 
   @Patch('notifications/:id/read')
