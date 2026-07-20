@@ -62,7 +62,7 @@ async function bootstrap() {
 
   if (s3Service.isAvailable) {
     rawExpress.use('/uploads', async (req, res, next) => {
-      const key = req.path.startsWith('/') ? req.path.slice(1) : req.path;
+      const key = `uploads${req.path}`;
       if (!key) return next();
       try {
         const url = await s3Service.getSignedUrl(key, 3600);
