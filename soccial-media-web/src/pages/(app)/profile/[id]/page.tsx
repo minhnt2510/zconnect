@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast'
 import ProfileTabs, { type ProfileTab } from '@/components/navigation/profile-tabs'
 import PostCard from '@/components/feed/PostCard'
 import { FeedSkeleton } from '@/components/feed/PostSkeleton'
-import type { FeedPost, FriendConnection } from '@/types'
+import type { FeedPost, FriendConnection, User } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import styles from './page.module.css'
 
@@ -27,6 +27,8 @@ type ProfileUser = {
   coverUrl?: string | null
   role: string
   isVerified: boolean
+  bio?: string | null
+  location?: string | null
   lastActiveAt?: string | null
 }
 
@@ -40,6 +42,7 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [friends, setFriends] = useState<FriendConnection[]>([])
   const [friendStatus, setFriendStatus] = useState<'none' | 'pending' | 'accepted'>('none')
+  const [relationship, setRelationship] = useState<{ status: string; requestedByMe?: boolean; isBlockedByMe?: boolean; isBlockedMe?: boolean } | null>(null)
   const [socialActionBusy, setSocialActionBusy] = useState(false)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
@@ -55,6 +58,11 @@ export default function ProfilePage() {
     return String(me.id) === profileId || me.username === profileId
   }, [me?.id, me?.username, profileId])
 
+  const targetUserId = useMemo(() => {
+    if (/^\d+$/.test(profileId)) return Number(profileId)
+    return profileUser?.userId || 0
+  }, [profileId, profileUser?.userId])
+
   const clearAuth = useAuthStore((state) => state.clearAuth)
 
   // Close own-profile menu on outside click
@@ -68,20 +76,33 @@ export default function ProfilePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [handleClickOutside])
 
+  const mapUserToProfileUser = (user: User): ProfileUser => ({
+    userId: user.id,
+    displayName: user.fullName,
+    username: user.username,
+    avatarUrl: user.avatarUrl,
+    coverUrl: user.coverUrl,
+    role: user.role,
+    isVerified: user.isVerified,
+    bio: user.bio || null,
+    location: user.location || null,
+    lastActiveAt: null,
+  })
+
   const fetchProfileByUsername = async (token: string, username: string) => {
     try {
       const r = await api.getUserByUsername(token, username)
       if (r.user) {
-        const mappedUser: ProfileUser = {
-          userId: r.user.id,
-          displayName: r.user.fullName,
-          username: r.user.username,
-          avatarUrl: r.user.avatarUrl,
-          role: r.user.role,
-          isVerified: r.user.isVerified,
-          lastActiveAt: null,
-        }
+        const mappedUser = mapUserToProfileUser(r.user)
         setProfileUser(mappedUser)
+        setRelationship(r.relationship || null)
+        if (r.relationship?.status === 'friends') {
+          setFriendStatus('accepted')
+        } else if (r.relationship?.status === 'pending_sent' || r.relationship?.status === 'pending_received') {
+          setFriendStatus('pending')
+        } else {
+          setFriendStatus('none')
+        }
         return r.user.id
       }
     } catch { /* not found */ }
@@ -91,17 +112,21 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!profileId || !token) return
     setIsLoadingProfile(true)
+    setFriendStatus('none')
     const isNumericId = /^\d+$/.test(profileId)
     if (isNumericId) {
       api.getUserProfile(token, Number(profileId))
         .then((r) => {
-          setProfileUser(r.user as ProfileUser | null)
-          if (r.relationship?.status === 'friends') {
-            setFriendStatus('accepted')
-          } else if (r.relationship?.status === 'pending_sent') {
-            setFriendStatus('pending')
-          } else {
-            setFriendStatus('none')
+          if (r.user) {
+            setProfileUser(mapUserToProfileUser(r.user))
+            setRelationship(r.relationship || null)
+            if (r.relationship?.status === 'friends') {
+              setFriendStatus('accepted')
+            } else if (r.relationship?.status === 'pending_sent' || r.relationship?.status === 'pending_received') {
+              setFriendStatus('pending')
+            } else {
+              setFriendStatus('none')
+            }
           }
         })
         .catch(console.error)
@@ -109,10 +134,6 @@ export default function ProfilePage() {
     } else {
       fetchProfileByUsername(token, profileId).then((userId) => {
         if (!userId) setIsLoadingProfile(false)
-        else {
-          setFriendStatus('none')
-          setIsLoadingProfile(false)
-        }
       })
     }
   }, [profileId, token])
@@ -223,19 +244,22 @@ export default function ProfilePage() {
         : me.accountStatus === 'hidden' ? 'Tài khoản đang ẩn'
           : 'Tài khoản đã xóa'
     : friendStatus === 'accepted' ? 'Đã kết bạn'
-      : friendStatus === 'pending' ? 'Đang chờ xác nhận'
-        : 'Chưa kết nối'
+      : relationship?.status === 'pending_sent' ? 'Đã gửi lời mời'
+        : relationship?.status === 'pending_received' ? 'Đang chờ xác nhận'
+          : 'Chưa kết nối'
 
   const handleRequestFriend = async () => {
-    if (!token || isOwnProfile || !Number(profileId)) return
+    if (!token || isOwnProfile || !targetUserId) return
     setSocialActionBusy(true)
     try {
-      await api.requestFriend(token, Number(profileId))
+      await api.requestFriend(token, targetUserId)
       setFriendStatus('pending')
+      setRelationship({ status: 'pending_sent', requestedByMe: true })
     } catch (error) {
       const errMsg = String(typeof error === 'object' && error && 'message' in error ? (error as any).message : '')
       if (errMsg.toLowerCase().includes('already')) {
         setFriendStatus('pending')
+        setRelationship({ status: 'pending_sent', requestedByMe: true })
       } else {
         console.error('Không thể gửi lời mời kết bạn', error)
       }
@@ -245,12 +269,13 @@ export default function ProfilePage() {
   }
 
   const handleUnfriend = async () => {
-    if (!token || isOwnProfile || !Number(profileId)) return
+    if (!token || isOwnProfile || !targetUserId) return
     if (!window.confirm('Bạn có chắc muốn hủy kết bạn?')) return
     setSocialActionBusy(true)
     try {
-      await api.deleteFriend(token, Number(profileId))
+      await api.deleteFriend(token, targetUserId)
       setFriendStatus('none')
+      setRelationship((prev) => prev ? { ...prev, status: 'none' } : null)
       setFriends((prev) => prev.filter((f) => String(f.id) !== profileId))
     } catch (error) {
       console.error('Không thể hủy kết bạn', error)
@@ -259,21 +284,49 @@ export default function ProfilePage() {
     }
   }
 
+  const handleAcceptRequest = async () => {
+    if (!token || isOwnProfile || !targetUserId) return
+    setSocialActionBusy(true)
+    try {
+      await api.acceptFriend(token, targetUserId)
+      setFriendStatus('accepted')
+      setRelationship((prev) => prev ? { ...prev, status: 'friends' } : null)
+    } catch (error) {
+      console.error('Không thể chấp nhận lời mời', error)
+    } finally {
+      setSocialActionBusy(false)
+    }
+  }
+
+  const handleCancelRequest = async () => {
+    if (!token || isOwnProfile || !targetUserId) return
+    setSocialActionBusy(true)
+    try {
+      await api.deleteFriend(token, targetUserId)
+      setFriendStatus('none')
+      setRelationship((prev) => prev ? { ...prev, status: 'none' } : null)
+    } catch (error) {
+      console.error('Không thể hủy lời mời', error)
+    } finally {
+      setSocialActionBusy(false)
+    }
+  }
+
   const handleMessageUser = async () => {
-    if (!token || isOwnProfile || !Number(profileId)) return
+    if (!token || isOwnProfile || !targetUserId) return
     setSocialActionBusy(true)
     try {
       const conversations = await api.listConversations(token)
       const existing = conversations.conversations.find(
         (conversation) =>
           conversation.type === 'direct' &&
-          conversation.members.some((member) => member.userId === Number(profileId))
+          conversation.members.some((member) => member.userId === targetUserId)
       )
       if (existing) {
         navigate(`/messages?conversation=${existing.id}`)
         return
       }
-      const created = await api.createDirectConversation(token, Number(profileId))
+      const created = await api.createDirectConversation(token, targetUserId)
       navigate(`/messages?conversation=${created.conversation.id}`)
     } catch (error) {
       console.error('Không thể mở hội thoại', error)
@@ -283,7 +336,7 @@ export default function ProfilePage() {
   }
 
   const handleReportAccount = async (payload: { reason: string; details?: string }) => {
-    if (!token || isOwnProfile || !Number(profileId)) return
+    if (!token || isOwnProfile || !targetUserId) return
     await api.submitReport(token, {
       targetType: 'user',
       targetId: profileId,
@@ -334,9 +387,9 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
       {/* Cover */}
       <section className="relative h-48 md:h-56 overflow-hidden bg-gradient-to-r from-primary/80 via-primary/50 to-accent/60">
-        {(profileUser?.coverUrl || me?.coverUrl) && (
-          <img src={profileUser?.coverUrl || me?.coverUrl || ''} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
-        )}
+        {(isOwnProfile ? me?.coverUrl : profileUser?.coverUrl) ? (
+          <img src={isOwnProfile ? me?.coverUrl || '' : profileUser?.coverUrl || ''} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
       </section>
 
@@ -420,6 +473,44 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="flex items-center gap-2 shrink-0">
+              {/* Friend action buttons based on relationship status */}
+              {relationship?.status === 'pending_sent' || (friendStatus === 'pending' && relationship?.requestedByMe !== false) ? (
+                <button
+                  type="button"
+                  onClick={handleCancelRequest}
+                  disabled={socialActionBusy}
+                  className="px-4 py-2 rounded-xl text-sm font-medium border border-border bg-card hover:bg-accent/10 disabled:opacity-50 transition-all"
+                >
+                  Hủy lời mời
+                </button>
+              ) : relationship?.status === 'pending_received' || (friendStatus === 'pending' && relationship?.requestedByMe === false) ? (
+                <button
+                  type="button"
+                  onClick={handleAcceptRequest}
+                  disabled={socialActionBusy}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-all"
+                >
+                  Chấp nhận
+                </button>
+              ) : friendStatus === 'accepted' ? (
+                <button
+                  type="button"
+                  onClick={handleUnfriend}
+                  disabled={socialActionBusy}
+                  className="px-4 py-2 rounded-xl text-sm font-medium border border-border bg-card hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 disabled:opacity-50 transition-all"
+                >
+                  Bạn bè
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRequestFriend}
+                  disabled={socialActionBusy}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-all"
+                >
+                  Thêm bạn
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleMessageUser}

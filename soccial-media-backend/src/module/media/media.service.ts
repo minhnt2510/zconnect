@@ -81,19 +81,22 @@ export class MediaService {
 
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${fileExt}`;
     const relativeDir = join('uploads', config.subDir, String(userId));
-
-    if (this.s3.isAvailable) {
-      const key = `${relativeDir.replace(/\\/g, '/')}/${fileName}`;
-      await this.s3.upload(buffer, key, body?.contentType);
-      const fileUrl = `/${key}`;
-      return { fileUrl, fileName, size: buffer.length };
-    }
-
     const absoluteDir = join(process.cwd(), relativeDir);
     await fs.mkdir(absoluteDir, { recursive: true });
 
+    // Always save to local disk first (survives S3 outages, works offline)
     const absolutePath = join(absoluteDir, fileName);
     await fs.writeFile(absolutePath, buffer);
+
+    // If S3 is available, sync the file to S3 as additional storage
+    if (this.s3.isAvailable) {
+      const key = `${relativeDir.replace(/\\/g, '/')}/${fileName}`;
+      try {
+        await this.s3.upload(buffer, key, body?.contentType);
+      } catch (err) {
+        console.error(`S3 upload failed for ${key}, file saved locally:`, err);
+      }
+    }
 
     const fileUrl = `/${relativeDir.replace(/\\/g, '/')}/${fileName}`;
     return { fileUrl, fileName, size: buffer.length };

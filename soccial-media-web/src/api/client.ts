@@ -41,23 +41,23 @@ export const resolveApiAssetUrl = (value: string | null | undefined) => {
     return value
   }
 
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
+
   if (value.startsWith('/uploads/')) {
     if (API_BASE.startsWith('/backend')) {
       return `/backend${value}`
     }
 
-    if (API_BASE.startsWith('/api')) {
-      return value
+    if (API_BASE.startsWith('/api') || API_BASE === '') {
+      return `${origin}${value}`
     }
 
     try {
-      const origin =
-        typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
-      if (!origin) return value
       const base = new URL(API_BASE, origin)
-      return new URL(value, `${base.origin}/`).toString()
+      return new URL(value, base.origin + '/').toString()
     } catch {
-      return value
+      return `${origin}${value}`
     }
   }
 

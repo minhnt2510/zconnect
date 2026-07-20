@@ -46,8 +46,11 @@ services:
       - mariadb
       - mongodb
       - chromadb
+    volumes:
+      - uploads_data:/app/uploads
 
 volumes:
   mariadb_data:
   mongodb_data:
   chromadb_data:
+  uploads_data:
