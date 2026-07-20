@@ -84,7 +84,8 @@ export class MediaService {
 
     if (this.s3.isAvailable) {
       const key = `${relativeDir.replace(/\\/g, '/')}/${fileName}`;
-      const fileUrl = await this.s3.upload(buffer, key, body?.contentType);
+      await this.s3.upload(buffer, key, body?.contentType);
+      const fileUrl = `/${key}`;
       return { fileUrl, fileName, size: buffer.length };
     }
 

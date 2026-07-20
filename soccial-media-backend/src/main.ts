@@ -9,6 +9,7 @@ import compression from 'compression';
 import helmet from 'helmet';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { S3Service } from './module/media/s3.service';
 
 async function bootstrap() {
   const logLevels = (process.env.NEST_LOG_LEVELS || 'warn,error')
@@ -52,10 +53,26 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(new IoAdapter(app));
 
+  const s3Service = app.get(S3Service);
+
   const uploadsRoot = join(process.cwd(), 'uploads');
   if (!existsSync(uploadsRoot)) {
     mkdirSync(uploadsRoot, { recursive: true });
   }
+
+  if (s3Service.isAvailable) {
+    rawExpress.use('/uploads', async (req, res, next) => {
+      const key = req.path.startsWith('/') ? req.path.slice(1) : req.path;
+      if (!key) return next();
+      try {
+        const url = await s3Service.getSignedUrl(key, 3600);
+        return res.redirect(url);
+      } catch {
+        next();
+      }
+    });
+  }
+
   rawExpress.use('/uploads', express.static(uploadsRoot));
 
   const port = process.env.PORT || process.env.API_PORT || 5007;
