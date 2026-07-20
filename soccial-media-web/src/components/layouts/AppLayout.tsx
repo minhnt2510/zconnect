@@ -9,7 +9,7 @@ import { ActiveCallWindow, IncomingCallModal, MinimizedCallPill, OutgoingCallMod
 import { resolveApiAssetUrl, api } from '@/api/client'
 import { connectSocket, getSocket } from '@/services/socket'
 import { toast } from '@/hooks/use-toast'
-import type { User } from '@/types'
+import type { ChatMessage, User } from '@/types'
 import styles from './app-layout.module.css'
 
 export default function AppLayout({
@@ -197,7 +197,7 @@ export default function AppLayout({
     socket.on('friend:accepted', onFriendAcceptedEvent)
 
     // Realtime unread badge for new messages (works on any page)
-    const handleNewMessage = (payload: { conversationId?: string }) => {
+    const handleNewMessage = (payload: ChatMessage) => {
       const conversationId = String(payload.conversationId || '')
       if (!conversationId) return
       const { selectedConversationId, conversations } = useChatStore.getState()
@@ -206,7 +206,11 @@ export default function AppLayout({
         useChatStore.setState({
           conversations: conversations.map((conv) =>
             conv.id === conversationId
-              ? { ...conv, unreadCount: (conv.unreadCount || 0) + 1 }
+              ? {
+                  ...conv,
+                  unreadCount: (conv.unreadCount || 0) + 1,
+                  lastMessage: payload,
+                }
               : conv
           ),
         })

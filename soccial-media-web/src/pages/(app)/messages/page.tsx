@@ -75,7 +75,6 @@ import { ReactionPicker } from './components/reaction-picker'
 import { ConversationDetailsPanel } from './components/conversation-details-panel'
 import { MessagesSidebar } from './components/messages-sidebar'
 import { MessageThread } from './components/message-thread'
-import { MessagesOverlays } from './components/messages-overlays'
 
 // ActiveCall type is imported from call-store
 
@@ -355,7 +354,7 @@ export default function MessagesPage() {
   const [translatingIds, setTranslatingIds] = useState<Record<string, boolean>>({})
   const [chatSummaryCollapsed, setChatSummaryCollapsed] = useState(false)
   const [sentimentCollapsed, setSentimentCollapsed] = useState(false)
-  const [showDetailsPanelDesktop, setShowDetailsPanelDesktop] = useState(true)
+  const [showDetailsPanelDesktop, setShowDetailsPanelDesktop] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
@@ -2055,6 +2054,7 @@ export default function MessagesPage() {
     setMessageSearchKeyword('')
     setPendingUnlockError(null)
     setPendingUnlockPassword('')
+    setShowDetailsPanelDesktop(false)
   }, [selectedConversationId])
 
   const handleToggleConversationPin = async () => {
@@ -3295,6 +3295,25 @@ export default function MessagesPage() {
     })
   }
 
+  // Close action menu on outside click
+  useEffect(() => {
+    if (!actionMenu) return
+    const handleClick = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setActionMenu(null)
+      }
+    }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActionMenu(null)
+    }
+    window.addEventListener('mousedown', handleClick)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handleClick)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [actionMenu])
+
   const openReactionPicker = (event: React.MouseEvent<HTMLElement>, messageId: string) => {
     event.preventDefault()
     event.stopPropagation()
@@ -4188,9 +4207,11 @@ export default function MessagesPage() {
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
               {directPeer ? (
               <Link to={`/profile/${directPeer.username || directPeer.id}`} className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 hover:opacity-80">
-                <img src={directPeer.avatarUrl || ''} alt={selectedName} loading="lazy" className="h-full w-full rounded-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+                {directPeer.avatarUrl ? (
+                  <img src={directPeer.avatarUrl} alt={selectedName} loading="lazy" className="absolute inset-0 z-10 h-full w-full rounded-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+                ) : null}
                 <span className="absolute inset-0 flex items-center justify-center">{(selectedName[0] || 'C').toUpperCase()}</span>
-                <i className={directPeer.online ? 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500' : 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-gray-300'} />
+                <i className={`absolute -bottom-0.5 -right-0.5 z-20 h-3 w-3 rounded-full border-2 border-white ${directPeer.online ? 'bg-green-500' : 'bg-gray-300'}`} />
               </Link>
             ) : (
               <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
@@ -4918,61 +4939,61 @@ export default function MessagesPage() {
                 </div>
               </>
             ) : (
-              <div ref={actionMenuRef} className="fixed z-50 w-56 rounded-xl border border-gray-200 bg-white py-1 shadow-xl" style={{ left: actionMenu.x, top: actionMenu.y }}>
-                <div className="flex items-center gap-2.5 border-b border-gray-100 px-3 py-2.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(getSenderName(activeActionMessage.senderId, activeActionMessage))}</span>
+              <div ref={actionMenuRef} className="fixed z-50 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-black/5" style={{ left: `${Math.min(actionMenu.x, window.innerWidth - 232)}px`, top: `${Math.min(actionMenu.y, window.innerHeight - 60)}px` }}>
+                <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">{getAvatarInitial(getSenderName(activeActionMessage.senderId, activeActionMessage))}</span>
                   <div className="min-w-0">
-                    <strong className="block truncate text-sm">{getSenderName(activeActionMessage.senderId, activeActionMessage)}</strong>
+                    <strong className="block truncate text-sm font-semibold text-gray-900">{getSenderName(activeActionMessage.senderId, activeActionMessage)}</strong>
                     <small className="text-xs text-gray-400">{formatVietnamTime(activeActionMessage.createdAt)}</small>
                   </div>
                 </div>
                 {(() => {
                   const isActionMsgRecalled = !!(activeActionMessage.isDeleted || (activeActionMessage.meta as Record<string, unknown>)?.recalled)
                   return (
-                    <>
+                    <div className="py-1">
                       {!isActionMsgRecalled ? (
                         <>
-                          <div className="flex items-center justify-around border-b border-gray-100 px-3 py-2">
+                          <div className="flex items-center justify-around border-b border-gray-100 px-4 py-2.5">
                             {[
                               { type: 'like', emoji: '👍', label: 'Thích' },
                               { type: 'love', emoji: '❤️', label: 'Yêu thích' },
                               { type: 'care', emoji: '🥰', label: 'Quan tâm' },
                             ].map((r) => (
-                              <button key={r.type} type="button" onClick={() => { handleReaction(activeActionMessage, r.type); setActionMenu(null) }} className="flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-gray-100 active:scale-110 transition-transform" title={r.label} aria-label={r.label}>
+                              <button key={r.type} type="button" onClick={() => { handleReaction(activeActionMessage, r.type); setActionMenu(null) }} className="flex h-10 w-10 items-center justify-center rounded-full text-xl hover:bg-gray-100 active:scale-110 transition-transform" title={r.label} aria-label={r.label}>
                                 {r.emoji}
                               </button>
                             ))}
                           </div>
-                          <button type="button" onClick={() => { setForwardingMessageId(activeActionMessage.id); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                            <Forward size={15} className="text-gray-400" />
-                            Chuyển tiếp
+                          <button type="button" onClick={() => { setForwardingMessageId(activeActionMessage.id); setActionMenu(null) }} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <Forward size={16} className="text-gray-400" />
+                            <span>Chuyển tiếp</span>
                           </button>
-                          <button type="button" onClick={() => { void handleTogglePinMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                            <Pin size={15} className="text-gray-400" />
-                            {pinnedMessageIds.has(activeActionMessage.id) ? 'Bỏ ghim' : 'Ghim'}
+                          <button type="button" onClick={() => { void handleTogglePinMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <Pin size={16} className="text-gray-400" />
+                            <span>{pinnedMessageIds.has(activeActionMessage.id) ? 'Bỏ ghim' : 'Ghim'}</span>
                           </button>
                           {activeActionMessage.text && !translatedMessages[activeActionMessage.id] ? (
-                            <button type="button" onClick={() => { handleTranslateMessage(activeActionMessage.id, activeActionMessage.text!); setActionMenu(null) }} disabled={translatingIds[activeActionMessage.id]} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                              <Languages size={15} className="text-gray-400" />
-                              {translatingIds[activeActionMessage.id] ? 'Đang dịch...' : 'Dịch (AI)'}
+                            <button type="button" onClick={() => { handleTranslateMessage(activeActionMessage.id, activeActionMessage.text!); setActionMenu(null) }} disabled={translatingIds[activeActionMessage.id]} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                              <Languages size={16} className="text-gray-400" />
+                              <span>{translatingIds[activeActionMessage.id] ? 'Đang dịch...' : 'Dịch (AI)'}</span>
                             </button>
                           ) : null}
                         </>
                       ) : null}
                       {activeActionMessage.senderId === user?.id ? (
                         <>
-                          <div className="mx-3 h-px bg-gray-100" />
-                          <button type="button" onClick={() => { handleRecall(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50">
-                            <Undo2 size={15} />
-                            Thu hồi
+                          <div className="mx-4 h-px bg-gray-100" />
+                          <button type="button" onClick={() => { handleRecall(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                            <Undo2 size={16} />
+                            <span>Thu hồi</span>
                           </button>
-                          <button type="button" onClick={() => { handleDeleteMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50">
-                            <Trash2 size={15} />
-                            Xóa
+                          <button type="button" onClick={() => { handleDeleteMessage(activeActionMessage); setActionMenu(null) }} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                            <Trash2 size={16} />
+                            <span>Xóa</span>
                           </button>
                         </>
                       ) : null}
-                    </>
+                    </div>
                   )
                 })()}
               </div>
