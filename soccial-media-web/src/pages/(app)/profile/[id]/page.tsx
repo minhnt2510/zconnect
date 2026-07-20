@@ -52,6 +52,10 @@ export default function ProfilePage() {
   const [reportAccountOpen, setReportAccountOpen] = useState(false)
   const [showOwnMenu, setShowOwnMenu] = useState(false)
   const ownMenuRef = useRef<HTMLDivElement>(null)
+  const [composeOpen, setComposeOpen] = useState(false)
+  const [composeContent, setComposeContent] = useState('')
+  const [composeVisibility, setComposeVisibility] = useState<'public' | 'private'>('public')
+  const [busyPost, setBusyPost] = useState(false)
 
   const isOwnProfile = useMemo(() => {
     if (!me?.id) return false
@@ -75,6 +79,27 @@ export default function ProfilePage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [handleClickOutside])
+
+  const handleCreatePost = async () => {
+    const text = composeContent.trim()
+    if (!text || !token || busyPost) return
+    setBusyPost(true)
+    try {
+      const { post } = await api.createPost(token, {
+        content: text,
+        visibility: composeVisibility,
+      })
+      setPosts((prev) => [post, ...prev])
+      setComposeContent('')
+      setComposeOpen(false)
+      setComposeVisibility('public')
+      toast({ title: 'Đã đăng bài viết' })
+    } catch {
+      toast({ title: 'Không thể đăng bài viết', description: 'Vui lòng thử lại.', variant: 'destructive' })
+    } finally {
+      setBusyPost(false)
+    }
+  }
 
   const mapUserToProfileUser = (user: User): ProfileUser => ({
     userId: user.id,
@@ -624,30 +649,100 @@ export default function ProfilePage() {
           {/* Right column */}
           <div className="space-y-4">
             <section className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
-                  {initials}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate(isOwnProfile ? '/feed?compose=1' : '/messages')}
-                  className="flex-1 text-left text-sm text-muted-foreground bg-muted/30 rounded-xl px-4 py-2.5 hover:bg-muted/50 transition-colors"
-                >
-                  {profileName.split(' ')[0]} ơi, bạn đang nghĩ gì thế?
-                </button>
-              </div>
-              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/60">
-                <button type="button" onClick={() => navigate('/feed?compose=1')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Tạo bài viết</button>
-                <button type="button" onClick={() => setActiveTab('photos')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ảnh/Video</button>
-                <div className="flex-1" />
-                <button
-                  type="button"
-                  onClick={() => setMediaOnly((c) => !c)}
-                  className={`text-xs transition-colors ${mediaOnly ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  {mediaOnly ? 'Tất cả' : 'Chỉ media'}
-                </button>
-              </div>
+              {isOwnProfile ? (
+                composeOpen ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={composeContent}
+                      onChange={(e) => setComposeContent(e.target.value)}
+                      placeholder={`${profileName.split(' ')[0]} ơi, bạn đang nghĩ gì thế?`}
+                      rows={4}
+                      className="w-full resize-none bg-muted/30 rounded-xl p-3 text-sm outline-none focus:bg-muted/50 transition-colors"
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-between">
+                      <select
+                        value={composeVisibility}
+                        onChange={(e) => setComposeVisibility(e.target.value as 'public' | 'private')}
+                        className="text-xs bg-muted/50 rounded-lg px-2 py-1.5 border border-border outline-none"
+                      >
+                        <option value="public">Công khai</option>
+                        <option value="private">Chỉ mình tôi</option>
+                      </select>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { setComposeOpen(false); setComposeContent('') }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-accent/10 transition-colors"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCreatePost}
+                          disabled={!composeContent.trim() || busyPost}
+                          className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                        >
+                          {busyPost ? 'Đang đăng...' : 'Đăng'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                        {initials}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setComposeOpen(true)}
+                        className="flex-1 text-left text-sm text-muted-foreground bg-muted/30 rounded-xl px-4 py-2.5 hover:bg-muted/50 transition-colors"
+                      >
+                        {profileName.split(' ')[0]} ơi, bạn đang nghĩ gì thế?
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/60">
+                      <button type="button" onClick={() => setComposeOpen(true)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Tạo bài viết</button>
+                      <button type="button" onClick={() => setActiveTab('photos')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ảnh/Video</button>
+                      <div className="flex-1" />
+                      <button
+                        type="button"
+                        onClick={() => setMediaOnly((c) => !c)}
+                        className={`text-xs transition-colors ${mediaOnly ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        {mediaOnly ? 'Tất cả' : 'Chỉ media'}
+                      </button>
+                    </div>
+                  </>
+                )
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                      {initials}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/messages')}
+                      className="flex-1 text-left text-sm text-muted-foreground bg-muted/30 rounded-xl px-4 py-2.5 hover:bg-muted/50 transition-colors"
+                    >
+                      Nhắn tin với {profileName.split(' ')[0]}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/60">
+                    <button type="button" onClick={() => setActiveTab('photos')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ảnh/Video</button>
+                    <div className="flex-1" />
+                    <button
+                      type="button"
+                      onClick={() => setMediaOnly((c) => !c)}
+                      className={`text-xs transition-colors ${mediaOnly ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      {mediaOnly ? 'Tất cả' : 'Chỉ media'}
+                    </button>
+                  </div>
+                </>
+              )}
             </section>
 
             <div className="space-y-4">
