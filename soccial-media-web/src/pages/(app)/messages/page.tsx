@@ -1004,7 +1004,7 @@ export default function MessagesPage() {
     if (!token) return
 
     const socket = connectSocket(token, user?.id)
-    socket.on('message:new', (payload: ChatMessage) => {
+    const handleNewMessage = (payload: ChatMessage) => {
       const normalized = normalizeIncomingMessageForViewer(payload, user?.id)
       upsertMessage(normalized.conversationId, normalized)
       if (normalized.conversationId === selectedConversationId) {
@@ -1015,7 +1015,8 @@ export default function MessagesPage() {
         })
       }
       refreshConversations().catch(() => undefined)
-    })
+    }
+    socket.on('message:new', handleNewMessage)
 
     socket.on('message:reaction', (payload: { conversationId: string; message: ChatMessage }) => {
       upsertMessage(String(payload.conversationId), normalizeIncomingMessageForViewer(payload.message, user?.id))
@@ -1445,7 +1446,7 @@ export default function MessagesPage() {
     })
 
     return () => {
-      socket.off('message:new')
+      socket.off('message:new', handleNewMessage)
       socket.off('message:reaction')
       socket.off('message:updated')
       socket.off('message:deleted')
@@ -4213,7 +4214,7 @@ export default function MessagesPage() {
               <button type="button" title="Chi tiết"
                 className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', showDetailsPanelDesktop && 'bg-blue-50 text-blue-600')}
                 disabled={!selectedConversation}
-                onClick={() => { if (window.innerWidth > 1180) setShowDetailsPanelDesktop(v => !v); else { setRightPanelSection('overview'); setShowSettingsDrawer(true) } }}
+                onClick={() => { setShowDetailsPanelDesktop(v => !v); if (isMobileViewport) setRightPanelSection('overview') }}
               ><Info size={18} /></button>
             </div>
           </header>
@@ -4910,8 +4911,8 @@ export default function MessagesPage() {
           <MediaLightbox url={mediaLightbox.url} alt={mediaLightbox.alt} onClose={() => setMediaLightbox(null)} />
         ) : null}
 
-        {showSettingsDrawer ? <button type="button" className="fixed inset-0 z-40 bg-black/20 md:hidden" aria-label="Đóng cài đặt hội thoại" onClick={() => setShowSettingsDrawer(false)} /> : null}
-        <aside className={`hidden lg:flex w-80 shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-white transition-transform duration-300${showSettingsDrawer ? ' flex' : ''}${!showDetailsPanelDesktop ? ' hidden' : ''}`}>
+        {showDetailsPanelDesktop && isMobileViewport ? <button type="button" className="fixed inset-0 z-40 bg-black/20 md:hidden" aria-label="Đóng" onClick={() => setShowDetailsPanelDesktop(false)} /> : null}
+        <aside className={`${showDetailsPanelDesktop ? 'fixed inset-y-0 right-0 z-50 flex w-80 shadow-xl md:relative md:z-auto md:shadow-none' : 'hidden'} flex-col overflow-hidden border-l border-gray-200 bg-white transition-transform duration-300 lg:flex${!showDetailsPanelDesktop ? ' lg:hidden' : ''}`}>
           <div className="flex-1 overflow-y-auto">
           <ConversationDetailsPanel
             selectedConversation={selectedConversation}
@@ -4958,8 +4959,8 @@ export default function MessagesPage() {
             sharedContent={sharedContent}
             loadingSharedContent={loadingSharedContent}
             onClose={() => {
-              setShowSettingsDrawer(false)
               setShowDetailsPanelDesktop(false)
+              setShowSettingsDrawer(false)
             }}
           />
           </div>

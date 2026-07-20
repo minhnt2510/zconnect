@@ -196,6 +196,24 @@ export default function AppLayout({
     socket.on('friend:request', onFriendRequestEvent)
     socket.on('friend:accepted', onFriendAcceptedEvent)
 
+    // Realtime unread badge for new messages (works on any page)
+    const handleNewMessage = (payload: { conversationId?: string }) => {
+      const conversationId = String(payload.conversationId || '')
+      if (!conversationId) return
+      const { selectedConversationId, conversations } = useChatStore.getState()
+      // Only bump unread when this conversation is not the one currently open
+      if (conversationId !== selectedConversationId) {
+        useChatStore.setState({
+          conversations: conversations.map((conv) =>
+            conv.id === conversationId
+              ? { ...conv, unreadCount: (conv.unreadCount || 0) + 1 }
+              : conv
+          ),
+        })
+      }
+    }
+    socket.on('message:new', handleNewMessage)
+
     // Load initial badge counts
     refreshBadgeCounts()
 
@@ -211,6 +229,7 @@ export default function AppLayout({
       socket.off('notification:all-read')
       socket.off('friend:request', onFriendRequestEvent)
       socket.off('friend:accepted', onFriendAcceptedEvent)
+      socket.off('message:new', handleNewMessage)
     }
   }, [clearAuth, navigate, refreshToken, setAuth, token, updateUserAvatar, user])
 
