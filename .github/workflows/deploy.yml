@@ -48,36 +48,57 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Check deployment secrets
+        id: check_secrets
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          if [ -z "$EC2_HOST" ] || [ -z "$EC2_USER" ] || [ -z "$EC2_SSH_KEY" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::EC2 secrets not configured. Deploy job skipped."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy Frontend
-        uses: appleboy/ssh-action@v1.2.0
+        if: steps.check_secrets.outputs.configured == 'true'
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          timeout: 60s
+          port: 22
+          timeout: 30s
           command_timeout: 900s
+          script_stop: true
           script: |
-            set -e
+            set -euxo pipefail
 
+            echo "=== Environment ==="
+            whoami
+            pwd
+            node -v
+            npm -v
+
+            echo "=== Git ==="
             cd ~/soccial-media-web
+            git remote -v
             git fetch origin
             git reset --hard origin/main
+            ls -la
 
+            echo "=== Install ==="
             npm install
 
-            export VITE_API_BASE_URL="${{ secrets.VITE_API_BASE_URL }}"
-            export VITE_SOCKET_URL="${{ secrets.VITE_SOCKET_URL }}"
-            export VITE_SOCKET_PATH="${{ secrets.VITE_SOCKET_PATH }}"
-            export VITE_BACKEND_TARGET="${{ secrets.VITE_BACKEND_TARGET }}"
-            export VITE_GOOGLE_CLIENT_ID="${{ secrets.VITE_GOOGLE_CLIENT_ID }}"
-            export VITE_TURN_URL="${{ secrets.VITE_TURN_URL }}"
-            export VITE_TURN_USERNAME="${{ secrets.VITE_TURN_USERNAME }}"
-            export VITE_TURN_CREDENTIAL="${{ secrets.VITE_TURN_CREDENTIAL }}"
-
+            echo "=== Build ==="
             npm run build
 
+            echo "=== Deploy ==="
             sudo rm -rf /usr/share/nginx/html/*
             sudo cp -r dist/* /usr/share/nginx/html/
 
             sudo nginx -t
             sudo systemctl restart nginx
+            echo "=== Done ==="
