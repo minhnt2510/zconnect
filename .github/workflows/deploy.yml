@@ -14,6 +14,9 @@ jobs:
     name: Lint & TypeCheck & Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: soccial-media-web
 
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +25,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: soccial-media-web/package-lock.json
 
       - run: npm ci
 
