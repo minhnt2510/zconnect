@@ -9,7 +9,7 @@
   PostReactionViewer,
   User,
 } from '@/types'
-import { API_BASE } from '@/config/api'
+import { API_BASE, BACKEND_ORIGIN } from '@/config/api'
 import { useAuthStore } from '@/contexts/auth-store'
 
 export type CallHistoryItem = {
@@ -45,6 +45,11 @@ export const resolveApiAssetUrl = (value: string | null | undefined) => {
     typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
 
   if (value.startsWith('/uploads/')) {
+    // Production: BACKEND_ORIGIN is derived from VITE_SOCKET_URL or VITE_API_BASE_URL
+    if (BACKEND_ORIGIN) {
+      return `${BACKEND_ORIGIN}${value}`
+    }
+    // Dev fallbacks: Vite proxy handles /uploads → backend
     if (API_BASE.startsWith('/backend')) {
       return `/backend${value}`
     }

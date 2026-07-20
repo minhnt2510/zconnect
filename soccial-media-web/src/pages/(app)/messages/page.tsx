@@ -3100,7 +3100,7 @@ export default function MessagesPage() {
             return api.sendMessagePayload(token, selectedConversationId, {
               type: attachmentDraft.type,
               text: trimmedMessage || undefined,
-              mediaUrl: upload.mediaUrl,
+              mediaUrl: upload.rawUrl || upload.mediaUrl,
               fileName: uploadFile.name,
               mimeType: uploadFile.type || 'application/octet-stream',
               fileSize: uploadFile.size,

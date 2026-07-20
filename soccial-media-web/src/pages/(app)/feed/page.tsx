@@ -627,7 +627,7 @@ export default function FeedPage() {
           contentType: file.type || "image/jpeg",
           base64Data: await fileToBase64(file),
         });
-        imageUrl = uploaded.mediaUrl || null;
+        imageUrl = uploaded.rawUrl || uploaded.mediaUrl || null;
       }
       const response = await api.addComment(token, postId, value, imageUrl);
       setPosts((prev) =>
@@ -726,7 +726,7 @@ export default function FeedPage() {
           contentType: file.type || "image/jpeg",
           base64Data: await fileToBase64(file),
         });
-        imageUrl = uploaded.mediaUrl || null;
+        imageUrl = uploaded.rawUrl || uploaded.mediaUrl || null;
       }
       const response = await api.addCommentReply(
         token,
