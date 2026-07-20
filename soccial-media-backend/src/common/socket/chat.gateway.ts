@@ -63,6 +63,8 @@ export class ChatGateway
       client.data.username = payload.username;
       client.join(`user:${userId}`);
       client.join('global-feed');
+      // Broadcast online status
+      this.server.to('global-feed').emit('presence:online', { userId });
     } catch (error) {
       this.logger.warn(
         `Socket auth failed: ${(error as Error)?.message || 'Invalid token'}`,
@@ -72,7 +74,10 @@ export class ChatGateway
   }
 
   handleDisconnect(client: Socket) {
-    void client;
+    const userId = Number(client.data?.userId || 0);
+    if (userId > 0) {
+      this.server.to('global-feed').emit('presence:offline', { userId });
+    }
   }
 
   @SubscribeMessage('join-conversation')

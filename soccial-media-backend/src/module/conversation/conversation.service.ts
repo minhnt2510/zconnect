@@ -517,6 +517,13 @@ export class ConversationService {
           : (item as any),
     );
     await this.convRepo.save(conversation);
+
+    emitToConversation(conversationId, 'message:seen', {
+      conversationId,
+      userId,
+      seenAt: new Date().toISOString(),
+    });
+
     return { message: 'Da cap nhat trang thai da xem' };
   }
 

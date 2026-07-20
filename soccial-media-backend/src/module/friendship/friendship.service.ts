@@ -10,6 +10,7 @@ import { FriendshipStatus } from '../../common/enum/friendship-status.enum';
 import { UserService } from '../user/user.service';
 import { NotificationService } from '../notification/notification.service';
 import { UserBlock } from '../user/user-block.entity';
+import { emitToUser } from '../../common/socket/chat-socket';
 
 @Injectable()
 export class FriendshipService {
@@ -102,9 +103,16 @@ export class FriendshipService {
     if (targetUser && requester) {
       await this.notificationService.create({
         userId: targetUserId,
+        type: 'friend-request',
         title: 'Yêu cầu kết bạn',
         content: `${requester.fullName} đã gửi lời mời kết bạn`,
         link: `/friends`,
+        meta: { actorId: userId, actorName: requester.fullName, actorAvatar: requester.avatarUrl },
+      });
+      emitToUser(targetUserId, 'friend:request', {
+        fromUserId: userId,
+        fromUserName: requester.fullName,
+        fromUserAvatar: requester.avatarUrl,
       });
     }
 
@@ -132,9 +140,16 @@ export class FriendshipService {
     if (requester && acceptor) {
       await this.notificationService.create({
         userId: requesterUserId,
+        type: 'friend-accepted',
         title: 'Chấp nhận kết bạn',
         content: `${acceptor.fullName} đã chấp nhận lời mời kết bạn`,
         link: `/friends`,
+        meta: { actorId: userId, actorName: acceptor.fullName, actorAvatar: acceptor.avatarUrl },
+      });
+      emitToUser(requesterUserId, 'friend:accepted', {
+        fromUserId: userId,
+        fromUserName: acceptor.fullName,
+        fromUserAvatar: acceptor.avatarUrl,
       });
     }
 

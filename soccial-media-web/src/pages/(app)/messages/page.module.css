@@ -5432,6 +5432,30 @@
   .messagesWrap {
     padding: 10px;
   }
+
+  .composer {
+    margin: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.5rem;
+  }
+
+  .composerIconBtn,
+  .composerSendBtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .composerTextarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .chatPanel {
+    height: 100%;
+  }
+
+  .convItem {
+    min-height: 60px;
+  }
 }
 
 /* Conversation theme overrides must stay after the production UI overrides. */

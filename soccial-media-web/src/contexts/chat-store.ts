@@ -6,6 +6,8 @@ type ChatState = {
   selectedConversationId: string | null
   messagesByConversation: Record<string, ChatMessage[]>
   locallyReadConversationIds: Record<string, true>
+  notificationUnreadCount: number
+  friendRequestCount: number
   setConversations: (items: Conversation[] | ((prev: Conversation[]) => Conversation[])) => void
   selectConversation: (conversationId: string) => void
   markConversationRead: (conversationId: string) => void
@@ -13,6 +15,8 @@ type ChatState = {
   appendMessage: (conversationId: string, message: ChatMessage) => void
   upsertMessage: (conversationId: string, message: ChatMessage) => void
   updateUserAvatar: (userId: number, avatarUrl: string | null) => void
+  setNotificationUnreadCount: (count: number | ((prev: number) => number)) => void
+  setFriendRequestCount: (count: number | ((prev: number) => number)) => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -20,6 +24,8 @@ export const useChatStore = create<ChatState>((set) => ({
   selectedConversationId: null,
   messagesByConversation: {},
   locallyReadConversationIds: {},
+  notificationUnreadCount: 0,
+  friendRequestCount: 0,
   setConversations: (items) =>
     set((state) => {
       const list = typeof items === 'function' ? items(state.conversations) : items
@@ -122,5 +128,13 @@ export const useChatStore = create<ChatState>((set) => ({
         messagesByConversation,
       }
     }),
+  setNotificationUnreadCount: (count) =>
+    set((state) => ({
+      notificationUnreadCount: typeof count === 'function' ? count(state.notificationUnreadCount) : count,
+    })),
+  setFriendRequestCount: (count) =>
+    set((state) => ({
+      friendRequestCount: typeof count === 'function' ? count(state.friendRequestCount) : count,
+    })),
 }))
 

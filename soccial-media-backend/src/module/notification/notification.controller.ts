@@ -21,6 +21,7 @@ export class NotificationController {
       req.user.sub,
     );
     return {
+      total: notifications.length,
       notifications: notifications.map((n) => ({
         id: String(n._id),
         userId: n.userId,

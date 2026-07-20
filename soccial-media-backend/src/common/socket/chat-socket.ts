@@ -127,36 +127,17 @@ const relayCallEvent = (socket: Socket, eventName: string, payload: any) => {
 
 export const registerChatSocketHandlers = (server: Server) => {
   server.on('connection', (socket) => {
-    const userId = resolveSocketUserId(socket);
-    if (userId) {
-      socket.join(`user:${userId}`);
-    }
+    // Only register handlers NOT covered by ChatGateway decorators.
+    // Gateway handles: join-conversation, leave-conversation, message:new,
+    // post:new, comment:new, notification:new, join-feed, leave-feed.
+    // These raw handlers cover call signaling + message reactions/updates
+    // which need socket.to() (exclude sender) semantics.
 
-    socket.on('join-conversation', (conversationId: string) => {
-      const roomId = String(conversationId || '').trim();
-      if (roomId) {
-        socket.join(roomId);
-      }
-    });
-
-    socket.on('leave-conversation', (conversationId: string) => {
-      const roomId = String(conversationId || '').trim();
-      if (roomId) {
-        socket.leave(roomId);
-      }
-    });
-
-    socket.on('message:new', (payload) =>
-      relayConversationEvent(socket, 'message:new', payload),
-    );
     socket.on('message:reaction', (payload) =>
       relayConversationEvent(socket, 'message:reaction', payload),
     );
     socket.on('message:updated', (payload) =>
       relayConversationEvent(socket, 'message:updated', payload),
-    );
-    socket.on('notification:new', (payload) =>
-      relayConversationEvent(socket, 'notification:new', payload),
     );
     socket.on('call:offer', (payload) =>
       relayCallEvent(socket, 'call:offer', payload),

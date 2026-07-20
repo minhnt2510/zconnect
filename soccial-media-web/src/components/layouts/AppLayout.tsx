@@ -165,6 +165,41 @@ export default function AppLayout({
     socket.on('user:updated', onUserUpdated)
     socket.on('user:moderation-updated', onUserUpdated)
 
+    // Notification & friend request badge counters
+    const setNotificationUnreadCount = useChatStore.getState().setNotificationUnreadCount
+    const setFriendRequestCount = useChatStore.getState().setFriendRequestCount
+
+    const onBadgeNotification = (payload: { isRead?: boolean }) => {
+      if (payload?.isRead) {
+        setNotificationUnreadCount(0)
+      } else {
+        setNotificationUnreadCount((n) => n + 1)
+      }
+    }
+    const onFriendRequest = () => {
+      setFriendRequestCount((n) => n + 1)
+    }
+    const onFriendAccepted = () => {
+      setFriendRequestCount(Math.max(0, useChatStore.getState().friendRequestCount - 1))
+    }
+
+    socket.on('notification:new', onBadgeNotification)
+    socket.on('notification:all-read', onBadgeNotification)
+    socket.on('friend:request', onFriendRequest)
+    socket.on('friend:accepted', onFriendAccepted)
+
+    // Load initial badge counts
+    fetch(`/api/social/notifications?limit=1`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json().catch(() => ({})))
+      .then((body) => {
+        if (typeof body?.total === 'number') setNotificationUnreadCount(body.total)
+        else if (body?.notifications) {
+          const unread = body.notifications.filter((n: any) => !n.is_read).length
+          setNotificationUnreadCount(unread)
+        }
+      })
+      .catch(() => undefined)
+
     return () => {
       socket.off('call:offer', onOffer)
       socket.off('call:incoming', onOffer)
@@ -173,6 +208,10 @@ export default function AppLayout({
       socket.off('user:avatar-updated', onAvatarUpdated)
       socket.off('user:updated', onUserUpdated)
       socket.off('user:moderation-updated', onUserUpdated)
+      socket.off('notification:new', onBadgeNotification)
+      socket.off('notification:all-read', onBadgeNotification)
+      socket.off('friend:request', onFriendRequest)
+      socket.off('friend:accepted', onFriendAccepted)
     }
   }, [clearAuth, navigate, refreshToken, setAuth, token, updateUserAvatar, user])
 

@@ -29,6 +29,8 @@ export default function MobileBottomNav() {
     (sum, conv) => sum + (conv.unreadCount || 0),
     0
   )
+  const notificationUnreadCount = useChatStore((s) => s.notificationUnreadCount)
+  const friendRequestCount = useChatStore((s) => s.friendRequestCount)
 
   const isActive = (href: string) => {
     if (href === '/profile') {
@@ -40,14 +42,24 @@ export default function MobileBottomNav() {
   const tabs = [
     { icon: House, label: 'Trang chủ', href: '/feed' },
     { icon: Compass, label: 'Khám phá', href: '/explore' },
-    { icon: Users, label: 'Bạn bè', href: '/friends' },
+    {
+      icon: Users,
+      label: 'Bạn bè',
+      href: '/friends',
+      badge: friendRequestCount,
+    },
     {
       icon: MessageSquareText,
       label: 'Tin nhắn',
       href: '/messages',
       badge: unreadMessages,
     },
-    { icon: Bell, label: 'Thông báo', href: '/notifications' },
+    {
+      icon: Bell,
+      label: 'Thông báo',
+      href: '/notifications',
+      badge: notificationUnreadCount,
+    },
     {
       icon: User,
       label: 'Hồ sơ',

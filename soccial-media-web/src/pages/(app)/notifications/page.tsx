@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -112,21 +112,28 @@ export default function NotificationsPage() {
     loadNotifications().catch(console.error)
   }, [token])
 
+  const soundOnRef = useRef(soundOn)
+  soundOnRef.current = soundOn
+
   useEffect(() => {
     if (!token || !user?.id) return
     const socket = connectSocket(token, user.id)
     const onNotification = (payload: NotificationItem) => {
-      setNotifications((prev) => [payload, ...prev.filter((item) => item.id !== payload.id)])
-      if (soundOn) {
-        try {
-          const audio = new Audio('/notification.mp3')
-          audio.volume = 0.35
-          void audio.play()
-        } catch {
-          // Browser may block autoplay.
+      setNotifications((prev) => {
+        // Sound
+        if (soundOnRef.current) {
+          try {
+            const audio = new Audio('/notification.mp3')
+            audio.volume = 0.35
+            void audio.play()
+          } catch { /* ignore */ }
         }
-      }
-      document.title = `(${notifications.filter((item) => !item.is_read).length + 1}) ZChat`
+        // Title badge
+        const unread = prev.filter((item) => !item.is_read).length + 1
+        document.title = `(${unread}) ZChat`
+        // Append
+        return [payload, ...prev.filter((item) => item.id !== payload.id)]
+      })
     }
     const onNotificationUpdated = (payload: NotificationItem) => {
       setNotifications((prev) => prev.map((item) => item.id === payload.id ? { ...item, ...payload } : item))
@@ -136,6 +143,7 @@ export default function NotificationsPage() {
     }
     const onAllRead = () => {
       setNotifications((prev) => prev.map((item) => ({ ...item, is_read: 1 })))
+      document.title = 'ZChat'
     }
     socket.on('notification:new', onNotification)
     socket.on('notification:updated', onNotificationUpdated)
@@ -147,7 +155,7 @@ export default function NotificationsPage() {
       socket.off('notification:deleted', onNotificationDeleted)
       socket.off('notification:all-read', onAllRead)
     }
-  }, [notifications, soundOn, token, user?.id])
+  }, [token, user?.id])
 
   const counts = useMemo(() => {
     const base: Record<Category, number> = { all: notifications.length, messages: 0, calls: 0, social: 0, system: 0 }

@@ -1563,6 +1563,23 @@ export default function MessagesPage() {
     }
   }, [activeCall, clearIncomingCall, joinedCallUserIds, refreshConversations, reloadFriendMap, reloadNotifications, selectedConversationId, setGlobalIncomingCall, token, updateUserAvatar, upsertMessage, user?.id])
 
+  // Recover peer connections when page becomes visible again (phone unlock, tab switch)
+  useEffect(() => {
+    if (!callAnswered || !activeCall) return
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return
+      peersRef.current.forEach((pc, userId) => {
+        if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
+          pc.restartIce()
+          const convId = activeCall.conversationId
+          if (convId) renegotiatePeer(userId, convId)
+        }
+      })
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [activeCall, callAnswered])
+
   useEffect(() => {
     if (!globalIncomingCall || incomingCall) return
     const activeConversationId = useCallStore.getState().activeCall?.conversationId

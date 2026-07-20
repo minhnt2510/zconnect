@@ -85,11 +85,13 @@ export default function LeftSidebar() {
   const isExpanded = (expanded || pinned) && !isTablet
   const sidebarWidth = isTablet ? 72 : isExpanded ? 260 : 72
 
-  // Unread messages count
+  // Unread counts
   const unreadMessages = conversations.reduce(
     (sum, conv) => sum + (conv.unreadCount || 0),
     0
   )
+  const notificationUnreadCount = useChatStore((s) => s.notificationUnreadCount)
+  const friendRequestCount = useChatStore((s) => s.friendRequestCount)
 
   // Active route check
   const isActive = (href: string) => {
@@ -143,7 +145,10 @@ export default function LeftSidebar() {
     const Icon = item.icon
     const href = item.href === '/profile' ? getProfileHref() : item.href
     const active = isActive(item.href)
-    const badgeCount = item.href === '/messages' ? unreadMessages : item.badge || 0
+    const badgeCount = item.href === '/messages' ? unreadMessages
+      : item.href === '/notifications' ? notificationUnreadCount
+      : item.href === '/friends' ? friendRequestCount
+      : item.badge || 0
     const showBadge = badgeCount > 0
 
     const linkContent = (
