@@ -412,6 +412,8 @@ export class FriendshipService {
         gender: user.sex === 1 ? 'Nam' : user.sex === 2 ? 'Nữ' : null,
         bio: user.bio || null,
         location: user.location || null,
+        role: (user.role || 'USER').toLowerCase(),
+        isVerified: true,
       },
       relationship: {
         status: relationshipStatus,

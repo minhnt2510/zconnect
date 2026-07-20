@@ -286,6 +286,13 @@ export class CommentService {
     }
   }
 
+  async findRawById(id: string): Promise<Comment | null> {
+    if (!ObjectId.isValid(id)) return null;
+    return this.commentsRepository.findOne({
+      where: { _id: new ObjectId(id) } as any,
+    });
+  }
+
   private toObjectId(id: string): any {
     if (!ObjectId.isValid(id)) {
       throw new BadRequestException('Comment id khong hop le');

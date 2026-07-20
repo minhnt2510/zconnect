@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './module/user/user.module';
@@ -29,6 +29,7 @@ import { AuthOtp } from './module/auth/auth-otp.entity';
 import { AiMessage } from './module/ai/ai-message.entity';
 import { ChatGateway } from './common/socket/chat.gateway';
 import { UserBlock } from './module/user/user-block.entity';
+import { CreateUserBlockTable1720000000000 } from './migrations/1720000000000-CreateUserBlockTable';
 
 function buildMariaUrl(): string {
   if (process.env.DATABASE_URL_MARIA) {
@@ -72,8 +73,11 @@ function buildMongoUrl(): string {
       name: 'mariadb',
       type: 'mariadb',
       url: buildMariaUrl(),
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: true,
       entities: [User, Friendship, Report, AuthOtp, UserBlock],
+      migrations: [CreateUserBlockTable1720000000000],
+      migrationsRun: true,
+      migrationsTableName: 'migrations',
       logging: process.env.DB_LOGGING === 'true',
     }),
     TypeOrmModule.forRoot({
