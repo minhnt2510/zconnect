@@ -30,6 +30,7 @@ import { api, isAuthExpiredError } from "@/api/client";
 import { ConfirmDialog, ReportDialog } from "@/components/dialogs";
 import type { FeedComment, FeedPost } from "@/types";
 import { useAuthStore } from "@/contexts/auth-store";
+import { useChatStore } from "@/contexts/chat-store";
 import { useSocialRealtime } from "@/hooks/use-social-realtime";
 import { toast } from "@/hooks/use-toast";
 import { compressImageFile } from "@/services/messages/file-utils";
@@ -181,6 +182,11 @@ export default function FeedPage() {
       });
     }
   }, [isSavedView, token, navigate]);
+
+  // Clear feed unread badge when user visits feed page
+  useEffect(() => {
+    useChatStore.getState().setFeedUnreadCount(0)
+  }, [])
 
   useSocialRealtime({
     token,

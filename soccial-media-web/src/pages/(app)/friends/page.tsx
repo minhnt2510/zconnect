@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Loader2, Search, Users, UserPlus, X } from 'lucide-react'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/contexts/auth-store'
+import { useChatStore } from '@/contexts/chat-store'
 import type { FriendConnection } from '@/types'
 import styles from './page.module.css'
 
@@ -44,6 +45,8 @@ export default function FriendsPage() {
       console.error('Không thể tải danh sách bạn bè', error)
       setNotice({ type: 'error', text: 'Không thể tải danh sách bạn bè. Vui lòng thử lại.' })
     })
+    // Clear friend request badge when visiting friends page
+    useChatStore.getState().setFriendRequestCount(0)
   }, [reloadFriends])
 
   const receivedRequests = useMemo(

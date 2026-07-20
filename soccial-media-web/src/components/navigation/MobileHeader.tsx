@@ -21,6 +21,7 @@ export default function MobileHeader() {
     (sum, conv) => sum + (conv.unreadCount || 0),
     0
   )
+  const notificationUnreadCount = useChatStore((s) => s.notificationUnreadCount)
 
   // Ẩn trên trang messages (có header riêng)
   if (pathname.startsWith('/messages')) return null
@@ -53,6 +54,11 @@ export default function MobileHeader() {
           aria-label="Thông báo"
         >
           <Bell size={20} />
+          {notificationUnreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground px-1 leading-none badge-animate">
+              {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
+            </span>
+          )}
         </Link>
         <Link
           to="/messages"
@@ -61,7 +67,7 @@ export default function MobileHeader() {
         >
           <MessageSquareText size={20} />
           {unreadMessages > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary text-[9px] font-bold text-primary-foreground flex items-center justify-center leading-none">
+            <span className="absolute -top-0.5 -right-0.5 flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground px-1 leading-none badge-animate">
               {unreadMessages > 9 ? '9+' : unreadMessages}
             </span>
           )}

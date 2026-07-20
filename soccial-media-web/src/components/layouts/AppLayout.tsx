@@ -149,6 +149,10 @@ export default function AppLayout({
           ...payload.user,
         },
       })
+      // Re-check profile completion badge
+      const updatedUser = payload.user
+      const hasPending = !updatedUser.bio || !updatedUser.avatarUrl || !updatedUser.phone
+      useChatStore.getState().setProfileHasPendingActions(Boolean(hasPending))
       if (payload.action && !['updated'].includes(payload.action)) {
         toast({
           title: 'Tài khoản đã được cập nhật',
@@ -168,6 +172,8 @@ export default function AppLayout({
     // Notification & friend request badge counters
     const setNotificationUnreadCount = useChatStore.getState().setNotificationUnreadCount
     const setFriendRequestCount = useChatStore.getState().setFriendRequestCount
+    const setFeedUnreadCount = useChatStore.getState().setFeedUnreadCount
+    const setProfileHasPendingActions = useChatStore.getState().setProfileHasPendingActions
 
     const refreshBadgeCounts = () => {
       api.notifications(token).then((res) => {
@@ -177,10 +183,15 @@ export default function AppLayout({
         const pending = (res.requests || []).filter((r: any) => r.status === 'pending' && !r.requestedByMe).length
         setFriendRequestCount(pending)
       }).catch(() => undefined)
+      // Check profile completion from store
+      const currentUser = useAuthStore.getState().user
+      if (currentUser) {
+        const hasPending = !currentUser.bio || !currentUser.avatarUrl || !currentUser.phone
+        setProfileHasPendingActions(Boolean(hasPending))
+      }
     }
 
     const onAnyNotification = () => {
-      // Refetch badge counts on any notification event
       setNotificationUnreadCount((n) => n + 1)
     }
 
@@ -191,10 +202,17 @@ export default function AppLayout({
       setFriendRequestCount(Math.max(0, useChatStore.getState().friendRequestCount - 1))
     }
 
+    // Feed new post detection (blue dot on Trang chủ)
+    // Cleared when user visits the feed page
+    const onPostCreated = () => {
+      setFeedUnreadCount((n) => n + 1)
+    }
+
     socket.on('notification:new', onAnyNotification)
     socket.on('notification:all-read', () => setNotificationUnreadCount(0))
     socket.on('friend:request', onFriendRequestEvent)
     socket.on('friend:accepted', onFriendAcceptedEvent)
+    socket.on('post:created', onPostCreated)
 
     // Realtime unread badge for new messages (works on any page)
     const handleNewMessage = (payload: ChatMessage) => {
@@ -234,6 +252,7 @@ export default function AppLayout({
       socket.off('friend:request', onFriendRequestEvent)
       socket.off('friend:accepted', onFriendAcceptedEvent)
       socket.off('message:new', handleNewMessage)
+      socket.off('post:created', onPostCreated)
     }
   }, [clearAuth, navigate, refreshToken, setAuth, token, updateUserAvatar, user])
 

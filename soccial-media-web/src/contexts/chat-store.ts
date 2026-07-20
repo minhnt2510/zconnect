@@ -8,6 +8,8 @@ type ChatState = {
   locallyReadConversationIds: Record<string, true>
   notificationUnreadCount: number
   friendRequestCount: number
+  feedUnreadCount: number
+  profileHasPendingActions: boolean
   setConversations: (items: Conversation[] | ((prev: Conversation[]) => Conversation[])) => void
   selectConversation: (conversationId: string) => void
   markConversationRead: (conversationId: string) => void
@@ -17,6 +19,8 @@ type ChatState = {
   updateUserAvatar: (userId: number, avatarUrl: string | null) => void
   setNotificationUnreadCount: (count: number | ((prev: number) => number)) => void
   setFriendRequestCount: (count: number | ((prev: number) => number)) => void
+  setFeedUnreadCount: (count: number | ((prev: number) => number)) => void
+  setProfileHasPendingActions: (value: boolean) => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -26,6 +30,8 @@ export const useChatStore = create<ChatState>((set) => ({
   locallyReadConversationIds: {},
   notificationUnreadCount: 0,
   friendRequestCount: 0,
+  feedUnreadCount: 0,
+  profileHasPendingActions: false,
   setConversations: (items) =>
     set((state) => {
       const list = typeof items === 'function' ? items(state.conversations) : items
@@ -136,5 +142,11 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       friendRequestCount: typeof count === 'function' ? count(state.friendRequestCount) : count,
     })),
+  setFeedUnreadCount: (count) =>
+    set((state) => ({
+      feedUnreadCount: typeof count === 'function' ? count(state.feedUnreadCount) : count,
+    })),
+  setProfileHasPendingActions: (value) =>
+    set({ profileHasPendingActions: value }),
 }))
 

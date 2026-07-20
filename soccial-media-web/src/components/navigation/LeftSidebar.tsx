@@ -92,6 +92,8 @@ export default function LeftSidebar() {
   )
   const notificationUnreadCount = useChatStore((s) => s.notificationUnreadCount)
   const friendRequestCount = useChatStore((s) => s.friendRequestCount)
+  const feedUnreadCount = useChatStore((s) => s.feedUnreadCount)
+  const profileHasPendingActions = useChatStore((s) => s.profileHasPendingActions)
 
   // Active route check
   const isActive = (href: string) => {
@@ -150,6 +152,8 @@ export default function LeftSidebar() {
       : item.href === '/friends' ? friendRequestCount
       : item.badge || 0
     const showBadge = badgeCount > 0
+    const showFeedDot = item.href === '/feed' && feedUnreadCount > 0
+    const showProfileDot = item.href === '/profile' && profileHasPendingActions
 
     const linkContent = (
       <div
@@ -169,9 +173,15 @@ export default function LeftSidebar() {
         <div className="relative shrink-0">
           <Icon size={22} strokeWidth={active ? 2.5 : 1.75} />
           {showBadge && (
-            <span className="absolute -top-1.5 -right-1.5 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1 leading-none">
+            <span className="absolute -top-1.5 -right-1.5 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1 leading-none badge-animate">
               {badgeCount > 99 ? '99+' : badgeCount}
             </span>
+          )}
+          {showFeedDot && !showBadge && (
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-background badge-animate" />
+          )}
+          {showProfileDot && (
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background badge-animate" />
           )}
         </div>
 

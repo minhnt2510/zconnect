@@ -31,6 +31,8 @@ export default function MobileBottomNav() {
   )
   const notificationUnreadCount = useChatStore((s) => s.notificationUnreadCount)
   const friendRequestCount = useChatStore((s) => s.friendRequestCount)
+  const feedUnreadCount = useChatStore((s) => s.feedUnreadCount)
+  const profileHasPendingActions = useChatStore((s) => s.profileHasPendingActions)
 
   const isActive = (href: string) => {
     if (href === '/profile') {
@@ -40,7 +42,7 @@ export default function MobileBottomNav() {
   }
 
   const tabs = [
-    { icon: House, label: 'Trang chủ', href: '/feed' },
+    { icon: House, label: 'Trang chủ', href: '/feed', badge: 0, feedDot: feedUnreadCount > 0 },
     { icon: Compass, label: 'Khám phá', href: '/explore' },
     {
       icon: Users,
@@ -64,6 +66,7 @@ export default function MobileBottomNav() {
       icon: User,
       label: 'Hồ sơ',
       href: user ? `/profile/${user.id}` : '/auth/login?next=/profile',
+      profileDot: profileHasPendingActions,
     },
   ]
 
@@ -103,9 +106,15 @@ export default function MobileBottomNav() {
               <div className="relative">
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.75} />
                 {showBadge && (
-                  <span className="absolute -top-1.5 -right-2 flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1 leading-none">
+                  <span className="absolute -top-1.5 -right-2 flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1 leading-none badge-animate">
                     {tab.badge! > 99 ? '99+' : tab.badge}
                   </span>
+                )}
+                {(tab as any).feedDot && !showBadge && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 ring-2 ring-background badge-animate" />
+                )}
+                {(tab as any).profileDot && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-background badge-animate" />
                 )}
                 {active && (
                   <motion.div

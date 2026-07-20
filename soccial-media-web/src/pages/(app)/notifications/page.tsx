@@ -21,6 +21,7 @@ import {
 
 import { api } from '@/api/client'
 import { useAuthStore } from '@/contexts/auth-store'
+import { useChatStore } from '@/contexts/chat-store'
 import { connectSocket } from '@/services/socket'
 import type { NotificationItem } from '@/types'
 import styles from './page.module.css'
@@ -110,6 +111,8 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     loadNotifications().catch(console.error)
+    // Clear notification badge when visiting notifications page
+    useChatStore.getState().setNotificationUnreadCount(0)
   }, [token])
 
   const soundOnRef = useRef(soundOn)
