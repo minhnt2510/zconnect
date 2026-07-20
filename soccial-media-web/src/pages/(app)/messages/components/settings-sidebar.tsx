@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   Crown,
+  ExternalLink,
   FileText,
   Flag,
   FolderOpen,
@@ -351,7 +352,9 @@ export function SettingsSidebar({
               <Avatar key={member.userId} name={member.fullName} avatarUrl={index === 0 ? conversation.avatarUrl || member.avatarUrl : member.avatarUrl} online={member.online} stacked />
             ))
           ) : (
-            <Avatar name={title} avatarUrl={peer?.avatarUrl || conversation.avatarUrl} online={peer?.online} />
+            <a href={`/profile/${peer?.username || peer?.userId || ''}`} className="flex flex-col items-center">
+              <Avatar name={title} avatarUrl={peer?.avatarUrl || conversation.avatarUrl} online={peer?.online} />
+            </a>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -390,6 +393,11 @@ export function SettingsSidebar({
         {isGroup ? <QuickActionButton icon={<UsersRound size={18} />} label="Quản lý" onClick={() => document.getElementById(`members-${conversation.id}`)?.scrollIntoView({ block: 'nearest' })} /> : null}
         {isGroup ? <QuickActionButton icon={<Image size={18} />} label="Ảnh nhóm" disabled={true} /> : null}
         <QuickActionButton icon={<Wallpaper size={18} />} label="Nền" onClick={() => backgroundInputRef.current?.click()} />
+        {!isGroup && peer ? (
+          <a href={`/profile/${peer.username || peer.userId}`} className="contents">
+            <QuickActionButton icon={<ExternalLink size={18} />} label="Xem trang" />
+          </a>
+        ) : null}
         {!isGroup ? <QuickActionButton icon={isDirectPeerBlocked ? <ShieldCheck size={18} /> : <ShieldX size={18} />} label={isDirectPeerBlocked ? 'Bỏ chặn' : 'Chặn'} active={isDirectPeerBlocked} onClick={() => void (isDirectPeerBlocked ? handleUnblockPeer() : handleBlockPeer())} /> : null}
       </div>
 

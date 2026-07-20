@@ -4176,71 +4176,45 @@ export default function MessagesPage() {
       <section
         className={`relative flex flex-1 flex-col min-w-0 overflow-hidden ${isMobileViewport && mobileShowList ? 'hidden' : ''} ${selectedConversationUiPrefs.largeText ? 'text-base' : ''}`}
         >
-          <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 px-3 py-2.5 md:flex-wrap">
+          <header className="flex shrink-0 items-center gap-1 border-b border-gray-200 px-3 py-2 md:gap-2">
             <button type="button" className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 md:hidden" onClick={() => setMobileShowList(true)} aria-label="Quay lại danh sách">
               <ArrowLeft size={18} />
             </button>
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
-                {selectedConversation?.avatarUrl || directPeer?.avatarUrl ? (
-                  <img
-                    src={selectedConversation?.avatarUrl || directPeer?.avatarUrl || ''}
-                    alt={selectedName}
-                    loading="lazy"
-                    className="h-full w-full rounded-full object-cover"
-                    onError={(event) => { event.currentTarget.style.display = 'none' }}
-                  />
-                ) : null}
-                <span>{(selectedName[0] || 'C').toUpperCase()}</span>
-                {directPeer ? <i className={directPeer.online ? 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500' : 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-gray-300'} /> : null}
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              {directPeer ? (
+              <Link to={`/profile/${directPeer.username || directPeer.id}`} className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 hover:opacity-80">
+                <img src={directPeer.avatarUrl || ''} alt={selectedName} loading="lazy" className="h-full w-full rounded-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+                <span className="absolute inset-0 flex items-center justify-center">{(selectedName[0] || 'C').toUpperCase()}</span>
+                <i className={directPeer.online ? 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500' : 'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-gray-300'} />
+              </Link>
+            ) : (
+              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+                {selectedConversation?.avatarUrl ? (
+                  <img src={selectedConversation.avatarUrl} alt={selectedName} loading="lazy" className="h-full w-full rounded-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+                ) : (
+                  <span>{(selectedName[0] || 'C').toUpperCase()}</span>
+                )}
               </div>
+            )}
               <div className="min-w-0">
-                <h2 className="truncate text-sm font-bold text-gray-900">
-                  {directPeer ? <Link to={`/profile/${directPeer.username || directPeer.id}`} className="hover:underline">{selectedName}</Link> : selectedName}
-                </h2>
-                {directPeer?.username ? <p className="truncate text-xs text-gray-500">@{directPeer.username}</p> : null}
+                <h2 className="truncate text-sm font-bold text-gray-900">{selectedName}</h2>
                 <p className="truncate text-xs text-gray-500">
                   {directPeer
-                    ? isDirectPeerFriend ? `Bạn bè • ${directPeerActivityLabel}` : 'Chưa kết bạn • Giới hạn 3 tin nhắn'
+                    ? (directPeer?.username ? `@${directPeer.username}` : isDirectPeerFriend ? 'Bạn bè' : 'Chưa kết bạn')
                     : `${selectedConversation?.onlineCount || 0} thành viên online`}
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto scrollbar-none md:w-full md:gap-1">
-              <button type="button"
-                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', chatSummary && 'bg-blue-50 text-blue-600')}
-                onClick={handleSummarizeChat} disabled={isSummarizing || !selectedConversationId}
-                data-tooltip="Summarize chat" data-tooltip-description="Create an AI summary"
-                title="Tóm tắt đoạn chat (AI)" aria-label="Tóm tắt"
-              ><Wand2 size={18} /></button>
-              <button type="button"
-                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', sentimentResult && 'bg-blue-50 text-blue-600')}
-                onClick={handleAnalyzeSentiment} disabled={isAnalyzingSentiment || !selectedConversationId}
-                data-tooltip="Analyze sentiment" data-tooltip-description="Review conversation tone"
-                title="Phân tích cảm xúc (AI)" aria-label="Phân tích cảm xúc"
-              ><BrainCircuit size={18} /></button>
+            <div className="flex shrink-0 items-center gap-0.5 md:gap-1">
               <button type="button" onClick={() => handleStartCall('video')} disabled={callTargets.length === 0}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40" title="Gọi video" aria-label="Gọi video"><Video size={18} /></button>
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40" title="Gọi video" aria-label="Gọi video"><Video size={18} /></button>
               <button type="button" onClick={() => handleStartCall('voice')} disabled={callTargets.length === 0}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40" title="Gọi thoại" aria-label="Gọi thoại"><Phone size={18} /></button>
-              <button type="button" onClick={() => setCallSettingsOpen(true)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100" title="Cài đặt cuộc gọi" aria-label="Cài đặt cuộc gọi"><Info size={16} /></button>
-              <button type="button"
-                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', (showMessageFilters || messageSearchKeyword) && 'bg-blue-50 text-blue-600')}
-                title="Tìm tin nhắn" aria-label="Tìm tin nhắn" disabled={!selectedConversation}
-                data-tooltip="Search" data-tooltip-description="Find messages in this conversation"
-                onClick={() => setShowMessageFilters((value) => !value)}><Search size={16} /></button>
-              <button type="button" title="Thêm người vào cuộc trò chuyện" aria-label="Thêm người vào cuộc trò chuyện"
-                disabled={!selectedGroup || !canAddMembers}
-                data-tooltip="Add Friend" data-tooltip-description="Add people to this conversation"
-                onClick={() => { setRightPanelSection('manage'); setShowSettingsDrawer(true) }}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40"><UserPlus size={16} /></button>
-              <button type="button" title="Xem chi tiết cuộc trò chuyện" aria-label="Xem chi tiết cuộc trò chuyện"
-                className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', showDetailsPanelDesktop && 'bg-blue-50 text-blue-600')}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40" title="Gọi thoại" aria-label="Gọi thoại"><Phone size={18} /></button>
+              <button type="button" title="Chi tiết"
+                className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100', showDetailsPanelDesktop && 'bg-blue-50 text-blue-600')}
                 disabled={!selectedConversation}
-                data-tooltip="Conversation Info" data-tooltip-description="Open custom chat features"
                 onClick={() => { if (window.innerWidth > 1180) setShowDetailsPanelDesktop(v => !v); else { setRightPanelSection('overview'); setShowSettingsDrawer(true) } }}
-              ><Info size={16} /></button>
+              ><Info size={18} /></button>
             </div>
           </header>
 
