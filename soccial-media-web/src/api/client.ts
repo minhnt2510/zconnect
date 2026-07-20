@@ -48,7 +48,15 @@ export const resolveApiAssetUrl = (value: string | null | undefined) => {
     if (API_BASE.startsWith('/backend')) {
       return `/backend${value}`
     }
-    return `${origin}${value}`
+    if (API_BASE.startsWith('/api') || API_BASE === '') {
+      return `${origin}${value}`
+    }
+    try {
+      const base = new URL(API_BASE, origin)
+      return new URL(value, base.origin + '/').toString()
+    } catch {
+      return `${origin}${value}`
+    }
   }
 
   return value
@@ -376,11 +384,15 @@ export const api = {
       '/auth/cover-upload-base64',
       { method: 'POST', body: JSON.stringify(payload) },
       token
-    ).then((data) => ({
-      message: data.message || 'Uploaded',
-      fileUrl: data.fileUrl || '',
-      user: data.user,
-    })),
+    ).then((data) => {
+      const rawUrl = data.fileUrl || '';
+      return {
+        message: data.message || 'Uploaded',
+        fileUrl: resolveApiAssetUrl(rawUrl) || '',
+        rawUrl,
+        user: data.user,
+      }
+    }),
 
   getSettings: (token: string) =>
     request<{
@@ -491,10 +503,14 @@ export const api = {
       '/social/posts/upload-base64',
       { method: 'POST', body: JSON.stringify(payload) },
       token
-    ).then((data) => ({
-      message: data.message || 'Uploaded',
-      mediaUrl: data.mediaUrl || data.fileUrl || '',
-    })),
+    ).then((data) => {
+      const rawUrl = data.mediaUrl || data.fileUrl || '';
+      return {
+        message: data.message || 'Uploaded',
+        mediaUrl: resolveApiAssetUrl(rawUrl) || '',
+        rawUrl,
+      }
+    }),
 
   savePost: (token: string, postId: number | string) =>
     request<{ saved: boolean }>(`/social/posts/${postId}/save`, { method: 'POST' }, token),
@@ -579,9 +595,13 @@ export const api = {
       '/social/comments/upload-base64',
       { method: 'POST', body: JSON.stringify(payload) },
       token
-    ).then((data) => ({
-      mediaUrl: data.mediaUrl || data.fileUrl || '',
-    })),
+    ).then((data) => {
+      const rawUrl = data.mediaUrl || data.fileUrl || '';
+      return {
+        mediaUrl: resolveApiAssetUrl(rawUrl) || '',
+        rawUrl,
+      }
+    }),
 
   deleteComment: (token: string, commentId: number | string) =>
     request<{ message: string }>(`/social/comments/${commentId}`, { method: 'DELETE' }, token),
@@ -838,10 +858,14 @@ export const api = {
       `/chat/conversations/${conversationId}/messages/upload-base64`,
       { method: 'POST', body: JSON.stringify(payload) },
       token
-    ).then((data) => ({
-      message: data.message || 'Uploaded',
-      mediaUrl: data.mediaUrl || data.fileUrl || '',
-    })),
+    ).then((data) => {
+      const rawUrl = data.mediaUrl || data.fileUrl || '';
+      return {
+        message: data.message || 'Uploaded',
+        mediaUrl: resolveApiAssetUrl(rawUrl) || '',
+        rawUrl,
+      }
+    }),
 
   reactMessage: (token: string, messageId: string, type: string) =>
     request<{ message: string; chatMessage: ChatMessage }>(

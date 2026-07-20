@@ -89,6 +89,7 @@ export default function FeedPage() {
   >({});
   const [isCommenting, setIsCommenting] = useState<Record<number, boolean>>({});
   const [modalMediaUrl, setModalMediaUrl] = useState("");
+  const [modalRawMediaUrl, setModalRawMediaUrl] = useState("");
   const [modalVisibility, setModalVisibility] = useState<"public" | "private">(
     "public",
   );
@@ -539,6 +540,7 @@ export default function FeedPage() {
       setContent("");
       setModalContent("");
       setModalMediaUrl("");
+      setModalRawMediaUrl("");
       setModalLocation("");
       setModalTaggedFriend("");
       resetComposerPanels();
@@ -1033,6 +1035,7 @@ export default function FeedPage() {
         throw new Error("Upload media thất bại, không nhận được URL.");
       }
       setModalMediaUrl(uploaded.mediaUrl);
+      setModalRawMediaUrl(uploaded.rawUrl || uploaded.mediaUrl);
     } catch (error) {
       if (handleAuthExpired(error)) return;
       console.error("Failed to upload post media", error);
@@ -1122,7 +1125,7 @@ export default function FeedPage() {
     event.preventDefault();
     await submitPost({
       text: modalContent,
-      mediaUrl: modalMediaUrl,
+      mediaUrl: modalRawMediaUrl || modalMediaUrl,
       visibility: modalVisibility,
       location: modalLocation,
       taggedFriend: modalTaggedFriend,
@@ -1998,7 +2001,7 @@ export default function FeedPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setModalMediaUrl("")}
+                  onClick={() => { setModalMediaUrl(""); setModalRawMediaUrl(""); }}
                   className="absolute top-2 right-2 px-2.5 py-1.5 rounded-lg bg-black/70 text-white text-xs font-medium flex items-center gap-1 hover:bg-black/90 transition-colors"
                   title="Xoá ảnh"
                 >
@@ -2180,6 +2183,7 @@ export default function FeedPage() {
                         type="button"
                         onClick={() => {
                           setModalMediaUrl("");
+                          setModalRawMediaUrl("");
                           setComposerMoreMenuOpen(false);
                         }}
                         disabled={!modalMediaUrl}

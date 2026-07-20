@@ -65,9 +65,10 @@ export default function EditPostModal({
         contentType: uploadFile.type || "application/octet-stream",
         base64Data: await fileToBase64(uploadFile),
       });
-      if (!upload.mediaUrl) throw new Error("Không thể tải media bài viết.");
+      const newMediaUrl = upload.rawUrl || upload.mediaUrl;
+      if (!newMediaUrl) throw new Error("Không thể tải media bài viết.");
       setDraft((prev) =>
-        prev ? { ...prev, mediaUrl: upload.mediaUrl } : prev,
+        prev ? { ...prev, mediaUrl: newMediaUrl } : prev,
       );
       toast({ title: "Đã tải media" });
     } catch (error) {
