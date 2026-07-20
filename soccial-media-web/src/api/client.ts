@@ -48,17 +48,7 @@ export const resolveApiAssetUrl = (value: string | null | undefined) => {
     if (API_BASE.startsWith('/backend')) {
       return `/backend${value}`
     }
-
-    if (API_BASE.startsWith('/api') || API_BASE === '') {
-      return `${origin}${value}`
-    }
-
-    try {
-      const base = new URL(API_BASE, origin)
-      return new URL(value, base.origin + '/').toString()
-    } catch {
-      return `${origin}${value}`
-    }
+    return `${origin}${value}`
   }
 
   return value
@@ -388,7 +378,7 @@ export const api = {
       token
     ).then((data) => ({
       message: data.message || 'Uploaded',
-      fileUrl: resolveApiAssetUrl(data.fileUrl || '') || '',
+      fileUrl: data.fileUrl || '',
       user: data.user,
     })),
 
@@ -503,7 +493,7 @@ export const api = {
       token
     ).then((data) => ({
       message: data.message || 'Uploaded',
-      mediaUrl: resolveApiAssetUrl(data.mediaUrl || data.fileUrl || '') || '',
+      mediaUrl: data.mediaUrl || data.fileUrl || '',
     })),
 
   savePost: (token: string, postId: number | string) =>
@@ -590,7 +580,7 @@ export const api = {
       { method: 'POST', body: JSON.stringify(payload) },
       token
     ).then((data) => ({
-      mediaUrl: resolveApiAssetUrl(data.mediaUrl || data.fileUrl || '') || '',
+      mediaUrl: data.mediaUrl || data.fileUrl || '',
     })),
 
   deleteComment: (token: string, commentId: number | string) =>
@@ -850,7 +840,7 @@ export const api = {
       token
     ).then((data) => ({
       message: data.message || 'Uploaded',
-      mediaUrl: resolveApiAssetUrl(data.mediaUrl || data.fileUrl || '') || '',
+      mediaUrl: data.mediaUrl || data.fileUrl || '',
     })),
 
   reactMessage: (token: string, messageId: string, type: string) =>
