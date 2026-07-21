@@ -116,6 +116,11 @@ async function bootstrap() {
     );
   }
 
+  // Health check for Render keep-alive cron job
+  rawExpress.get('/api/health', (_req, res) => {
+    res.json({ status: 'OK', time: new Date().toISOString() })
+  })
+
   const port = process.env.PORT || process.env.API_PORT || 5007;
 
   // Graceful shutdown
