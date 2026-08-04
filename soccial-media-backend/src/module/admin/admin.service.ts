@@ -69,6 +69,37 @@ export class AdminService {
     return 'active';
   }
 
+  async listPosts(params: {
+    q?: string;
+    status?: string;
+    visibility?: string;
+    limit?: number;
+  }): Promise<{ posts: any[] }> {
+    const posts = await this.postService.adminFindAll(params);
+    return { posts };
+  }
+
+  async updatePost(
+    id: string,
+    payload: { status?: string; visibility?: string },
+  ) {
+    let nextVisibility = payload.visibility;
+    if (payload.status === 'hidden') nextVisibility = 'private';
+    if (payload.status === 'published') nextVisibility = 'public';
+    if (payload.status === 'deleted') {
+      throw new BadRequestException(
+        'Xóa bài viết: dùng DELETE /api/social/admin/posts/:id',
+      );
+    }
+    const post = await this.postService.adminUpdate(id, nextVisibility);
+    return { message: 'Post updated successfully', post };
+  }
+
+  async deletePost(id: string) {
+    await this.commentService.deleteByPost(id);
+    return this.postService.adminDelete(id);
+  }
+
   async listUsers(): Promise<{ users: any[] }> {
     const users = await this.usersRepository.find({
       order: { createdAt: 'DESC' },

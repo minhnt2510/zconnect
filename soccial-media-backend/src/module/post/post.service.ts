@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +15,12 @@ import { emitToConversation } from '../../common/socket/chat-socket';
 import { Friendship } from '../friendship/friendship.entity';
 import { FriendshipStatus } from '../../common/enum/friendship-status.enum';
 import { NotificationService } from '../notification/notification.service';
+import { UserStatus } from '../../common/enum/user-status.enum';
+import {
+  SPAM,
+  SPAM_BLOCK_MESSAGE,
+  SPAM_RESTRICTED_MESSAGE,
+} from '../../common/constants/spam.constants';
 
 /**
  * PostService - Xử lý toàn bộ logic nghiệp vụ liên quan đến bài viết
@@ -98,15 +105,77 @@ export class PostService {
     };
   }
 
+  private async restrictForSpam(userId: number, reason: string): Promise<never> {
+    try {
+      await this.userService.update(userId, {
+        status: UserStatus.RESTRICTED,
+        restrictionReason: reason,
+      });
+    } catch {
+      /* ignore */
+    }
+    try {
+      await this.notificationService.create({
+        userId,
+        type: 'account_restricted',
+        title: 'Phát hiện spam',
+        content: 'Tài khoản của bạn đã bị khóa do đăng spam. Chờ admin duyệt (khoảng 1 tuần) để tiếp tục.',
+        link: '/feed',
+        meta: { reason },
+      });
+    } catch {
+      /* ignore */
+    }
+    throw new HttpException(SPAM_BLOCK_MESSAGE, 429);
+  }
+
+  private async checkPostSpam(userId: number, content: string) {
+    // TypeORM mongo count() ignores dotted "owner.userId" paths (returns 0),
+    // same limitation as delete(); find() + length is the reliable way.
+    const since = new Date(Date.now() - SPAM.POST_WINDOW_MS);
+    const recent = await this.postsRepository.find({
+      where: {
+        'owner.userId': Number(userId),
+        createdAt: { $gte: since },
+      } as any,
+      take: SPAM.MAX_POSTS_PER_WINDOW + 1,
+    });
+    if (recent.length >= SPAM.MAX_POSTS_PER_WINDOW) {
+      await this.restrictForSpam(
+        userId,
+        `Đăng ${recent.length + 1} bài trong ${SPAM.POST_WINDOW_MS / 60000} phút`,
+      );
+    }
+    if (content) {
+      const dup = await this.postsRepository.find({
+        where: {
+          'owner.userId': Number(userId),
+          content,
+          createdAt: { $gte: new Date(Date.now() - SPAM.DUPLICATE_WINDOW_MS) },
+        } as any,
+        take: SPAM.DUPLICATE_LIMIT + 1,
+      });
+      if (dup.length >= SPAM.DUPLICATE_LIMIT) {
+        await this.restrictForSpam(userId, 'Đăng nội dung trùng lặp nhiều lần');
+      }
+    }
+  }
+
   async create(createPostDto: CreatePostDto, ownerId: number) {
     const user = await this.userService.findOne(ownerId);
     if (!user) throw new NotFoundException('User not found');
+
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new HttpException(SPAM_RESTRICTED_MESSAGE, 403);
+    }
 
     const content = String(createPostDto.content || '').trim();
     const mediaUrl = String(createPostDto.mediaUrl || '').trim();
     if (!content && !mediaUrl) {
       throw new BadRequestException('Bai viet can co noi dung hoac anh/video');
     }
+
+    await this.checkPostSpam(ownerId, content);
 
     const post = this.postsRepository.create({
       title: String(createPostDto.title || '').trim(),
@@ -397,6 +466,56 @@ export class PostService {
     }
 
     await this.postsRepository.save(posts);
+  }
+
+  async adminFindAll(params: {
+    q?: string;
+    status?: string;
+    visibility?: string;
+    limit?: number;
+  }): Promise<any[]> {
+    const limit = Math.min(Number(params?.limit || 200) || 200, 500);
+    const where: any = {};
+    if (params?.visibility) {
+      where.visibility = params.visibility;
+    }
+    if (params?.q) {
+      const escaped = String(params.q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      where.$or = [
+        { content: regex },
+        { title: regex },
+        { 'owner.displayName': regex },
+        { 'owner.username': regex },
+      ];
+    }
+    const posts = await this.postsRepository.find({
+      where,
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+    return posts.map((p) => this.toResponse(p));
+  }
+
+  async adminUpdate(id: string, visibility?: string) {
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
+    if (!post) throw new NotFoundException('Post not found');
+    if (visibility) {
+      post.visibility = visibility as any;
+    }
+    const saved = await this.postsRepository.save(post);
+    return this.toResponse(saved);
+  }
+
+  async adminDelete(id: string) {
+    const post = await this.postsRepository.findOne({
+      where: { _id: this.toObjectId(id) } as any,
+    });
+    if (!post) throw new NotFoundException('Post not found');
+    await this.postsRepository.delete({ _id: this.toObjectId(id) } as any);
+    return { message: 'Post deleted successfully' };
   }
 
   private toObjectId(id: string): any {

@@ -613,6 +613,12 @@ export default function PostCard({
                 onReport={onReportComment}
                 expandedReplyIds={expandedReplyIds}
                 onToggleExpandedReply={onToggleExpandedReply}
+                canDelete={Boolean(
+                  user &&
+                    (Number(comment.userId) === Number(user.id) ||
+                      Number(post.authorId) === Number(user.id) ||
+                      ['admin', 'moderator'].includes(String(user.role).toLowerCase()))
+                )}
               />
             ))}
 
@@ -746,6 +752,7 @@ interface CommentItemProps {
   onReport: (comment: FeedComment) => void
   expandedReplyIds: Record<string, boolean>
   onToggleExpandedReply: (commentId: string) => void
+  canDelete: boolean
 }
 
 function CommentItem({
@@ -755,6 +762,7 @@ function CommentItem({
   onAddReply, busyCommentId,
   onDelete, onReport,
   expandedReplyIds, onToggleExpandedReply,
+  canDelete,
 }: CommentItemProps) {
   const key = String(comment.id)
   const replies = comment.replies || []
@@ -816,14 +824,16 @@ function CommentItem({
           >
             Báo cáo
           </button>
-          <button
-            type="button"
-            onClick={() => onDelete(comment)}
-            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-            disabled={busyCommentId === comment.id}
-          >
-            Xóa
-          </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(comment)}
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+              disabled={busyCommentId === comment.id}
+            >
+              Xóa
+            </button>
+          )}
         </div>
 
         {/* Reply composer */}
@@ -878,6 +888,7 @@ function CommentItem({
                 onReport={onReport}
                 expandedReplyIds={expandedReplyIds}
                 onToggleExpandedReply={onToggleExpandedReply}
+                canDelete={canDelete}
               />
             ))}
             {replies.length > 2 && (

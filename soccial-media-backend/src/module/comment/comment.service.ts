@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,6 +13,12 @@ import { UserService } from '../user/user.service';
 import { PostService } from '../post/post.service';
 import { emitToConversation } from '../../common/socket/chat-socket';
 import { NotificationService } from '../notification/notification.service';
+import { UserStatus } from '../../common/enum/user-status.enum';
+import {
+  SPAM,
+  SPAM_BLOCK_MESSAGE,
+  SPAM_RESTRICTED_MESSAGE,
+} from '../../common/constants/spam.constants';
 
 @Injectable()
 export class CommentService {
@@ -46,6 +53,62 @@ export class CommentService {
     };
   }
 
+  private async restrictForSpam(userId: number, reason: string): Promise<never> {
+    try {
+      await this.userService.update(userId, {
+        status: UserStatus.RESTRICTED,
+        restrictionReason: reason,
+      });
+    } catch {
+      /* ignore */
+    }
+    try {
+      await this.notificationService.create({
+        userId,
+        type: 'account_restricted',
+        title: 'Phát hiện spam',
+        content: 'Tài khoản của bạn đã bị khóa do đăng spam. Chờ admin duyệt (khoảng 1 tuần) để tiếp tục.',
+        link: '/feed',
+        meta: { reason },
+      });
+    } catch {
+      /* ignore */
+    }
+    throw new HttpException(SPAM_BLOCK_MESSAGE, 429);
+  }
+
+  private async checkCommentSpam(userId: number, content: string) {
+    // TypeORM mongo count() ignores dotted "owner.userId" paths (returns 0),
+    // same limitation as delete(); find() + length is the reliable way.
+    const since = new Date(Date.now() - SPAM.COMMENT_WINDOW_MS);
+    const recent = await this.commentsRepository.find({
+      where: {
+        'owner.userId': Number(userId),
+        createdAt: { $gte: since },
+      } as any,
+      take: SPAM.MAX_COMMENTS_PER_WINDOW + 1,
+    });
+    if (recent.length >= SPAM.MAX_COMMENTS_PER_WINDOW) {
+      await this.restrictForSpam(
+        userId,
+        `Bình luận ${recent.length + 1} lần trong ${SPAM.COMMENT_WINDOW_MS / 60000} phút`,
+      );
+    }
+    if (content) {
+      const dup = await this.commentsRepository.find({
+        where: {
+          'owner.userId': Number(userId),
+          content,
+          createdAt: { $gte: new Date(Date.now() - SPAM.DUPLICATE_WINDOW_MS) },
+        } as any,
+        take: SPAM.DUPLICATE_LIMIT + 1,
+      });
+      if (dup.length >= SPAM.DUPLICATE_LIMIT) {
+        await this.restrictForSpam(userId, 'Bình luận trùng lặp nhiều lần');
+      }
+    }
+  }
+
   async create(
     postId: string,
     content: string,
@@ -54,6 +117,12 @@ export class CommentService {
   ) {
     const user = await this.userService.findOne(userId);
     if (!user) throw new NotFoundException('User not found');
+
+    if (String(user.status || '').toUpperCase() !== 'ACTIVE') {
+      throw new HttpException(SPAM_RESTRICTED_MESSAGE, 403);
+    }
+
+    await this.checkCommentSpam(userId, content);
 
     const comment = this.commentsRepository.create({
       postId,
@@ -257,8 +326,21 @@ export class CommentService {
       where: { _id: this.toObjectId(commentId) } as any,
     });
     if (!comment) throw new NotFoundException('Comment not found');
-    if (comment.owner?.userId !== userId)
-      throw new ForbiddenException('Not authorized');
+
+    const isOwner = Number(comment.owner?.userId) === Number(userId);
+    if (!isOwner) {
+      let postOwnerId = 0;
+      try {
+        postOwnerId = Number(
+          (await this.postService.getPostSummary(comment.postId))?.authorId || 0,
+        );
+      } catch {
+        postOwnerId = 0;
+      }
+      if (postOwnerId !== Number(userId)) {
+        throw new ForbiddenException('Not authorized');
+      }
+    }
 
     await this.commentsRepository.delete({
       _id: this.toObjectId(commentId),
@@ -353,6 +435,16 @@ export class CommentService {
       }
       await this.commentsRepository.save(reactedComments);
     }
+  }
+
+  async deleteByPost(postId: string): Promise<number> {
+    const comments = await this.commentsRepository.find({
+      where: { postId } as any,
+    });
+    for (const comment of comments) {
+      await this.commentsRepository.delete({ _id: comment._id } as any);
+    }
+    return comments.length;
   }
 
   async findRawById(id: string): Promise<Comment | null> {

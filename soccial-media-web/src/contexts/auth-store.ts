@@ -28,12 +28,12 @@ export const useAuthStore = create<AuthState>()(
       name: 'abc-auth-storage',
       merge: (persistedState, currentState) => {
         const persisted = (persistedState ?? {}) as Partial<AuthState>
-        const user = persisted.user
+        const user: User | null = persisted.user
           ? {
               ...persisted.user,
               role: (persisted.user.role || '').toLowerCase() as User['role'],
             }
-          : persisted.user
+          : persisted.user ?? null
         return { ...currentState, ...persisted, user }
       },
     }

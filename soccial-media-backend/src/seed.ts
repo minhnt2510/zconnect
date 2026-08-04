@@ -55,6 +55,8 @@ const upsertUser = async (
   if (resetExisting) {
     const hashedPassword = await bcrypt.hash(account.password, 10);
     existing.password = hashedPassword;
+    if (account.username) existing.username = account.username;
+    if (account.fullName) existing.fullName = account.fullName;
     await userRepo.save(existing);
     return 'reset';
   }

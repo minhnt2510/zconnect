@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -43,5 +44,36 @@ export class AdminController {
   @UseGuards(AdminGuard)
   deleteUser(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.adminService.deleteUser(req.user.sub, id);
+  }
+
+  @Get('social/admin/posts')
+  @UseGuards(AdminGuard)
+  listPosts(
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('visibility') visibility?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminService.listPosts({
+      q,
+      status,
+      visibility,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Patch('social/admin/posts/:id')
+  @UseGuards(AdminGuard)
+  updatePost(
+    @Param('id') id: string,
+    @Body() body: { status?: string; visibility?: string },
+  ) {
+    return this.adminService.updatePost(id, body);
+  }
+
+  @Delete('social/admin/posts/:id')
+  @UseGuards(AdminGuard)
+  deletePost(@Param('id') id: string) {
+    return this.adminService.deletePost(id);
   }
 }
