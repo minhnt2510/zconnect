@@ -6,10 +6,11 @@ import { Post } from '../post/post.entity';
 import { Comment } from '../comment/comment.entity';
 
 // Sua du lieu cu khi khoi dong:
-// - commentCount cua post = so comment top-level thuc te (truoc day dem bang
-//   phep cong tru thu cong nen bi lech khi xoa reply/comment hang loat)
-// - Bo reacts cua user da khong con ton tai (xoa user truc tiep qua SQL se
-//   lam sot reacts trong post.interacts, khien post hien so cam xuc ao)
+// - Xoa comments cua user khong con ton tai (xoa user truc tiep qua SQL lam
+//   sot comment + reacts, khi khien post hien so lieu ao)
+// - commentCount cua post = so comment top-level cua tac gia con hoat dong
+//   (giong bo loc hien thi cua findByPost, tranh lech so voi UI)
+// - Bo reacts cua user khong con ton tai trong post.interacts
 @Injectable()
 export class DataRepairService implements OnApplicationBootstrap {
   private readonly logger = new Logger('DataRepair');
@@ -35,14 +36,39 @@ export class DataRepairService implements OnApplicationBootstrap {
     const [posts, comments, users] = await Promise.all([
       this.postsRepo.find({}),
       this.commentsRepo.find({}),
-      this.usersRepo.find({ select: ['userId'] as any }),
+      this.usersRepo.find({}),
     ]);
 
-    const activeUserIds = new Set(users.map((u) => Number(u.userId)));
+    const existingIds = new Set(users.map((u) => Number(u.userId)));
+    const activeIds = new Set(
+      users
+        .filter((u) => String(u.status || '').toUpperCase() === 'ACTIVE')
+        .map((u) => Number(u.userId)),
+    );
+
+    // Xoa comment cua tac gia da khong con ton tai + reply con mo coi
+    const deadTopIds = new Set(
+      comments
+        .filter((c) => !existingIds.has(Number(c.owner?.userId)))
+        .map((c) => String(c._id)),
+    );
+    let removedComments = 0;
+    for (const c of comments) {
+      const isDeadAuthor = !existingIds.has(Number(c.owner?.userId));
+      const isOrphanReply =
+        Boolean(c.parentId) && deadTopIds.has(String(c.parentId));
+      if (isDeadAuthor || isOrphanReply) {
+        await this.commentsRepo.delete({ _id: c._id } as any);
+        removedComments++;
+      }
+    }
+    if (removedComments > 0) {
+      this.logger.log(`Data repair: removed ${removedComments} orphan comments`);
+    }
 
     const topLevelCounts = new Map<string, number>();
     for (const c of comments) {
-      if (!c.parentId) {
+      if (!c.parentId && activeIds.has(Number(c.owner?.userId))) {
         const key = String(c.postId);
         topLevelCounts.set(key, (topLevelCounts.get(key) || 0) + 1);
       }
@@ -52,7 +78,7 @@ export class DataRepairService implements OnApplicationBootstrap {
     for (const post of posts) {
       const nextCount = topLevelCounts.get(String(post._id)) || 0;
       const interacts = (post.interacts || []).filter((i) =>
-        activeUserIds.has(Number(i?.userId)),
+        existingIds.has(Number(i?.userId)),
       );
       const countChanged = Number(post.commentCount || 0) !== nextCount;
       const reactsChanged = interacts.length !== (post.interacts || []).length;

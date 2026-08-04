@@ -30,18 +30,15 @@ export class CommentService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  private async countTopLevelComments(postId: string): Promise<number> {
-    const rows = await this.commentsRepository.find({
-      where: { postId, parentId: { $in: ['', null] } } as any,
-      select: ['_id'] as any,
-    });
-    return rows.length;
-  }
-
   private async recountCommentCount(postId: string) {
     try {
-      const count = await this.countTopLevelComments(postId);
-      await this.postService.setCommentCount(postId, count);
+      // Chi dem comment cua tac gia con hoat dong - giong bo loc hien thi
+      // cua findByPost, de count luon khop voi so comment nguoi dung thay duoc
+      const topLevel = await this.commentsRepository.find({
+        where: { postId, parentId: { $in: ['', null] } } as any,
+      });
+      const visible = await this.keepActiveAuthors(topLevel);
+      await this.postService.setCommentCount(postId, visible.length);
     } catch {
       /* ignore */
     }
