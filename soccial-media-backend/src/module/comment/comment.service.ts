@@ -144,6 +144,22 @@ export class CommentService {
     return { comment: this.toResponse(saved, userId) };
   }
 
+  private async keepActiveAuthors<T extends { owner?: { userId?: number } }>(
+    items: T[],
+  ): Promise<T[]> {
+    const ids = Array.from(
+      new Set(items.map((i) => Number(i.owner?.userId || 0)).filter(Boolean)),
+    );
+    if (!ids.length) return items;
+    const users = await this.userService.findByIds(ids);
+    const activeIds = new Set(
+      users
+        .filter((u) => String(u.status || '').toUpperCase() === 'ACTIVE')
+        .map((u) => u.userId),
+    );
+    return items.filter((i) => activeIds.has(Number(i.owner?.userId || 0)));
+  }
+
   async findByPost(postId: string, viewerId?: number) {
     const comments = await this.commentsRepository.find({
       where: { postId, parentId: { $in: ['', null] } as any },
@@ -155,20 +171,27 @@ export class CommentService {
       order: { createdAt: 'ASC' },
     });
 
+    const [visibleComments, visibleReplies] = await Promise.all([
+      this.keepActiveAuthors(comments),
+      this.keepActiveAuthors(replies),
+    ]);
+
+    const visibleTopIds = new Set(visibleComments.map((c) => String(c._id)));
     const commentMap = new Map<string, any[]>();
-    for (const reply of replies) {
+    for (const reply of visibleReplies) {
       const parentKey = reply.parentId || String(reply._id);
+      if (!visibleTopIds.has(parentKey)) continue;
       if (!commentMap.has(parentKey)) commentMap.set(parentKey, []);
       commentMap.get(parentKey)!.push(this.toResponse(reply, viewerId));
     }
 
     return {
-      comments: comments.map((c) => ({
+      comments: visibleComments.map((c) => ({
         ...this.toResponse(c, viewerId),
         replyCount: commentMap.get(String(c._id))?.length || 0,
         replies: commentMap.get(String(c._id)) || [],
       })),
-      total: comments.length,
+      total: visibleComments.length,
     };
   }
 
@@ -248,6 +271,52 @@ export class CommentService {
     }
 
     return { message: 'Comment deleted successfully' };
+  }
+
+  async deleteAllByUser(userId: number): Promise<void> {
+    const authored = await this.commentsRepository.find({
+      where: { 'owner.userId': Number(userId) } as any,
+    });
+
+    const authoredIds = authored.map((c) => String(c._id));
+    const affectedPostIds = Array.from(
+      new Set(
+        authored.map((c) => String(c.postId)).filter((id) => id && id !== ''),
+      ),
+    );
+
+    // Delete by _id: TypeORM mongo delete() with the nested "owner.userId"
+    // path would silently drop the whole collection instead of filtering.
+    for (const comment of authored) {
+      await this.commentsRepository.delete({ _id: comment._id } as any);
+    }
+
+    const orphanReplies = authoredIds.length
+      ? await this.commentsRepository.find({
+          where: { parentId: { $in: authoredIds } } as any,
+        })
+      : [];
+    for (const reply of orphanReplies) {
+      await this.commentsRepository.delete({ _id: reply._id } as any);
+    }
+
+    for (const postId of affectedPostIds) {
+      try {
+        await this.postService.decrementCommentCount(postId);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const reactedComments = await this.commentsRepository.find({
+      where: { 'reacts.userId': Number(userId) } as any,
+    });
+    for (const comment of reactedComments) {
+      comment.reacts = (comment.reacts || []).filter(
+        (r) => Number(r.userId) !== Number(userId),
+      );
+      await this.commentsRepository.save(comment);
+    }
   }
 
   async syncAuthorProfile(userId: number, fullName: string, avatarUrl: string, username: string) {

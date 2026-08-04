@@ -235,11 +235,24 @@ export function UserCell({ user, onClick }: { user: User; onClick?: () => void }
   )
 }
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function UserDrawer({ user, onClose }: { user: User | null; onClose: () => void }) {
   const recent = useMemo(
     () => [
-      'Đăng nhập từ thiết bị web',
-      'Cập nhật hồ sơ cá nhân',
+      'Đăng ký tài khoản',
+      'Đăng nhập lần gần nhất',
       'Tương tác với bài viết cộng đồng',
     ],
     [],
@@ -275,7 +288,9 @@ export function UserDrawer({ user, onClose }: { user: User | null; onClose: () =
           <div className={styles.profileList}>
             <span>Email: <b>{user.email || 'Chưa cập nhật'}</b></span>
             <span>Số điện thoại: <b>{user.phone || 'Chưa cập nhật'}</b></span>
-            <span>Thiết bị/IP: <b>Web · 127.0.0.1</b></span>
+            <span>IP đăng ký: <b>{user.registerIp || '—'}</b></span>
+            <span>Ngày đăng ký: <b>{formatDateTime(user.createdAt)}</b></span>
+            <span>Truy cập gần nhất: <b>{formatDateTime(user.lastLoginAt)}</b></span>
             <span>Cảnh cáo: <b>{user.warningCount || 0}</b></span>
             <span>Lý do hạn chế: <b>{user.restrictionReason || 'Không có'}</b></span>
           </div>

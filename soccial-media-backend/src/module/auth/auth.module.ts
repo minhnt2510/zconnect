@@ -12,6 +12,7 @@ import { CommentModule } from '../comment/comment.module';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthOtp } from './auth-otp.entity';
+import { RegistrationLog } from '../registration-log/registration-log.entity';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { AuthOtp } from './auth-otp.entity';
         signOptions: { expiresIn: '2h' },
       }),
     }),
-    TypeOrmModule.forFeature([AuthOtp], 'mariadb'),
+    TypeOrmModule.forFeature([AuthOtp, RegistrationLog], 'mariadb'),
     UserModule,
     PostModule,
     CommentModule,

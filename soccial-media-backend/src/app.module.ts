@@ -17,6 +17,7 @@ import { AiModule } from './module/ai/ai.module';
 import { DiscoveryModule } from './module/discovery/discovery.module';
 import { MediaModule } from './module/media/media.module';
 import { HealthModule } from './module/health/health.module';
+import { AdminModule } from './module/admin/admin.module';
 import { Message } from './module/message/message.entity';
 import { Conversation } from './module/conversation/conversation.entity';
 import { Friendship } from './module/friendship/friendship.entity';
@@ -29,6 +30,7 @@ import { AuthOtp } from './module/auth/auth-otp.entity';
 import { AiMessage } from './module/ai/ai-message.entity';
 import { ChatGateway } from './common/socket/chat.gateway';
 import { UserBlock } from './module/user/user-block.entity';
+import { RegistrationLog } from './module/registration-log/registration-log.entity';
 import { CreateUserBlockTable1720000000000 } from './migrations/1720000000000-CreateUserBlockTable';
 
 function buildMariaUrl(): string {
@@ -74,7 +76,7 @@ function buildMongoUrl(): string {
       type: 'mariadb',
       url: buildMariaUrl(),
       synchronize: true,
-      entities: [User, Friendship, Report, AuthOtp, UserBlock],
+      entities: [User, Friendship, Report, AuthOtp, UserBlock, RegistrationLog],
       migrations: [CreateUserBlockTable1720000000000],
       migrationsRun: true,
       migrationsTableName: 'migrations',
@@ -100,6 +102,7 @@ function buildMongoUrl(): string {
     DiscoveryModule,
     MediaModule,
     HealthModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService, ChatGateway],

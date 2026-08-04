@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
@@ -17,6 +19,10 @@ import { MailService } from '../../common/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthOtp } from './auth-otp.entity';
+import { RegistrationLog } from '../registration-log/registration-log.entity';
+
+const MAX_REGISTRATIONS_PER_IP = 3;
+const REGISTRATION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 type AuthUserLike = {
   userId: number;
@@ -30,6 +36,9 @@ type AuthUserLike = {
   phone?: string | null;
   bio?: string | null;
   location?: string | null;
+  createdAt?: Date | null;
+  lastLoginAt?: Date | null;
+  registerIp?: string | null;
 };
 
 @Injectable()
@@ -38,6 +47,8 @@ export class AuthService {
   constructor(
     @InjectRepository(AuthOtp, 'mariadb')
     private readonly authOtpRepo: Repository<AuthOtp>,
+    @InjectRepository(RegistrationLog, 'mariadb')
+    private readonly registrationLogRepo: Repository<RegistrationLog>,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     private readonly postService: PostService,
@@ -84,13 +95,24 @@ export class AuthService {
       fullName: user.fullName,
       avatarUrl: user.avatarUrl || '',
       coverUrl: user.coverUrl || '',
-      role: user.role || 'USER',
+      role: String(user.role || 'USER').toLowerCase(),
       phone: user.phone || '',
       bio: user.bio || null,
       location: user.location || null,
       isVerified: true,
       accountStatus: String(user.status || 'ACTIVE').toLowerCase(),
+      createdAt: user.createdAt?.toISOString?.() ?? null,
+      lastLoginAt: user.lastLoginAt?.toISOString?.() ?? null,
+      registerIp: user.registerIp || null,
     };
+  }
+
+  private async touchLastLogin(userId: number) {
+    try {
+      await this.userService.update(userId, { lastLoginAt: new Date() });
+    } catch {
+      /* ignore */
+    }
   }
 
   private async issueTokens(user: AuthUserLike) {
@@ -202,10 +224,26 @@ export class AuthService {
       throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
     }
 
+    this.touchLastLogin(user.userId);
     return this.buildAuthResponse(user);
   }
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto, clientIp?: string) {
+    if (clientIp) {
+      const weekAgo = new Date(Date.now() - REGISTRATION_WINDOW_MS);
+      const recentCount = await this.registrationLogRepo
+        .createQueryBuilder('log')
+        .where('log.ip = :ip', { ip: clientIp })
+        .andWhere('log.createdAt > :weekAgo', { weekAgo })
+        .getCount();
+      if (recentCount >= MAX_REGISTRATIONS_PER_IP) {
+        throw new HttpException(
+          `IP của bạn đã đăng ký quá ${MAX_REGISTRATIONS_PER_IP} tài khoản trong 1 tuần. Vui lòng thử lại sau.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+
     const emailOrPhone = registerDto.emailOrPhone || registerDto.email || '';
     const isEmail = emailOrPhone.includes('@');
 
@@ -238,7 +276,17 @@ export class AuthService {
       sex: Number.isFinite(Number(registerDto.sex))
         ? Number(registerDto.sex)
         : 0,
+      registerIp: clientIp || undefined,
     });
+
+    if (clientIp) {
+      await this.registrationLogRepo.save(
+        this.registrationLogRepo.create({
+          ip: clientIp,
+          createdAt: new Date(),
+        }),
+      );
+    }
 
     return this.buildAuthResponse(newUser);
   }
@@ -257,6 +305,7 @@ export class AuthService {
         throw new UnauthorizedException('Token không hợp lệ');
       }
 
+      this.touchLastLogin(user.userId);
       return this.buildAuthResponse(user);
     } catch {
       throw new UnauthorizedException(
@@ -456,6 +505,7 @@ export class AuthService {
       throw new NotFoundException('Khong tim thay tai khoan de xac thuc');
     }
 
+    this.touchLastLogin(user.userId);
     return this.buildAuthResponse(user);
   }
 
@@ -544,6 +594,7 @@ export class AuthService {
         avatarUrl: googleUser.avatarUrl || undefined,
       });
     }
+    this.touchLastLogin(user.userId);
     return this.buildAuthResponse(user);
   }
 }

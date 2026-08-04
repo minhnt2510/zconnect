@@ -1,9 +1,15 @@
 /**
  * Script seed tao tai khoan mac dinh
  * Chay: npx ts-node src/seed.ts
+ *
+ * KHONG dat mat khau co dinh trong file nay - repo co the bi clone,
+ * mat khau sinh ngau nhien va chi in ra console khi tai khoan duoc tao.
+ * Muon dat mat khau cu the, set env: ADMIN_EMAIL, ADMIN_USERNAME, ADMIN_PASSWORD,
+ * USER1_PASSWORD, USER2_PASSWORD (xem .env, git da ignore).
  */
 import 'dotenv/config';
 import 'reflect-metadata';
+import * as crypto from 'crypto';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from './module/user/user.entity';
@@ -12,6 +18,48 @@ import { UserStatus } from './common/enum/user-status.enum';
 import { Friendship } from './module/friendship/friendship.entity';
 import { FriendshipStatus } from './common/enum/friendship-status.enum';
 import { Post } from './module/post/post.entity';
+
+const randomPassword = () => crypto.randomBytes(12).toString('base64url');
+
+type SeedAccount = {
+  email: string;
+  username: string;
+  password: string;
+  role: string;
+  fullName: string;
+  phone?: string;
+};
+
+const upsertUser = async (
+  userRepo: any,
+  account: SeedAccount,
+  resetExisting: boolean,
+) => {
+  const existing = await userRepo.findOne({ where: { email: account.email } as any });
+  if (!existing) {
+    const hashedPassword = await bcrypt.hash(account.password, 10);
+    await userRepo.save(
+      userRepo.create({
+        email: account.email,
+        password: hashedPassword,
+        username: account.username,
+        fullName: account.fullName,
+        phone: account.phone || '',
+        avatarUrl: '',
+        role: account.role,
+        status: UserStatus.ACTIVE,
+      }),
+    );
+    return 'created';
+  }
+  if (resetExisting) {
+    const hashedPassword = await bcrypt.hash(account.password, 10);
+    existing.password = hashedPassword;
+    await userRepo.save(existing);
+    return 'reset';
+  }
+  return 'exists';
+};
 
 const mariadbConfig = () => {
   const url = process.env.DATABASE_URL_MARIA;
@@ -66,81 +114,79 @@ async function seed() {
   const postRepo = mongoDataSource.getMongoRepository(Post);
 
   try {
-    const adminEmail = 'admin@zchat.local';
-    const adminPassword = 'REDACTED';
-    const existingAdmin = await userRepo.findOne({
-      where: { email: adminEmail } as any,
-    });
+    const adminEnvPassword = String(process.env.ADMIN_PASSWORD || '').trim();
+    const adminPassword = adminEnvPassword || randomPassword();
+    const adminReset = Boolean(adminEnvPassword);
+    const adminAccount: SeedAccount = {
+      email: String(process.env.ADMIN_EMAIL || 'admin@zchat.local')
+        .trim()
+        .toLowerCase(),
+      username: String(process.env.ADMIN_USERNAME || 'admin').trim().toLowerCase(),
+      password: adminPassword,
+      role: UserRole.ADMIN,
+      fullName: 'Quan tri vien',
+    };
 
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash(adminPassword, 10);
-      const admin = userRepo.create({
-        email: adminEmail,
-        password: hashedPassword,
-        username: 'admin',
-        fullName: 'Quan tri vien',
-        phone: '',
-        avatarUrl: '',
-        role: UserRole.ADMIN,
-        status: UserStatus.ACTIVE,
-      });
-      await userRepo.save(admin);
-      console.log('Tao tai khoan ADMIN: ' + adminEmail + ' / ' + adminPassword);
+    const adminResult = await upsertUser(userRepo, adminAccount, adminReset);
+    if (adminResult === 'created') {
+      console.log(
+        `Tao tai khoan ADMIN (GIU BI MAT, khong commit): ${adminAccount.email} / ${adminPassword}`,
+      );
+    } else if (adminResult === 'reset') {
+      console.log(
+        `Da dat lai mat khau ADMIN (GIU BI MAT, khong commit): ${adminAccount.email} / ${adminPassword}`,
+      );
     } else {
-      console.log('Tai khoan Admin da ton tai');
+      console.log(
+        'Tai khoan Admin da ton tai (mat khau giu nguyen). Dat env ADMIN_PASSWORD de doi mat khau.',
+      );
     }
 
-    const userEmail = 'user@zchat.local';
-    const userPassword = 'REDACTED';
-    const existingUser = await userRepo.findOne({
-      where: { email: userEmail } as any,
-    });
-
-    if (!existingUser) {
-      const hashedPassword = await bcrypt.hash(userPassword, 10);
-      const user = userRepo.create({
-        email: userEmail,
-        password: hashedPassword,
+    const user1EnvPassword = String(process.env.USER1_PASSWORD || '').trim();
+    const user2EnvPassword = String(process.env.USER2_PASSWORD || '').trim();
+    const demoAccounts: SeedAccount[] = [
+      {
+        email: 'user@zchat.local',
         username: 'testuser',
+        password: user1EnvPassword || randomPassword(),
+        role: UserRole.USER,
         fullName: 'Nguoi dung Test',
-        phone: '',
-        avatarUrl: '',
-        role: UserRole.USER,
-        status: UserStatus.ACTIVE,
-      });
-      await userRepo.save(user);
-      console.log('Tao tai khoan USER: ' + userEmail + ' / ' + userPassword);
-    } else {
-      console.log('Tai khoan User da ton tai');
-    }
-
-    const user2Email = 'user2@zchat.local';
-    const user2Password = 'REDACTED';
-    const existingUser2 = await userRepo.findOne({
-      where: { email: user2Email } as any,
-    });
-
-    if (!existingUser2) {
-      const hashedPassword = await bcrypt.hash(user2Password, 10);
-      const user2 = userRepo.create({
-        email: user2Email,
-        password: hashedPassword,
+      },
+      {
+        email: 'user2@zchat.local',
         username: 'testuser2',
-        fullName: 'Nguoi dung Test 2',
-        phone: '',
-        avatarUrl: '',
+        password: user2EnvPassword || randomPassword(),
         role: UserRole.USER,
-        status: UserStatus.ACTIVE,
-      });
-      await userRepo.save(user2);
-      console.log('Tao tai khoan USER 2: ' + user2Email + ' / ' + user2Password);
-    } else {
-      console.log('Tai khoan User 2 da ton tai');
+        fullName: 'Nguoi dung Test 2',
+      },
+    ];
+
+    for (let i = 0; i < demoAccounts.length; i++) {
+      const account = demoAccounts[i];
+      const reset = i === 0 ? Boolean(user1EnvPassword) : Boolean(user2EnvPassword);
+      const result = await upsertUser(userRepo, account, reset);
+      if (result === 'created') {
+        console.log(
+          `Tao tai khoan USER demo (GIU BI MAT, khong commit): ${account.email} / ${account.password}`,
+        );
+      } else if (result === 'reset') {
+        console.log(
+          `Da dat lai mat khau USER demo (GIU BI MAT, khong commit): ${account.email} / ${account.password}`,
+        );
+      } else {
+        console.log(`Tai khoan ${account.email} da ton tai (mat khau giu nguyen).`);
+      }
     }
 
-    const admin = await userRepo.findOne({ where: { email: adminEmail } as any });
-    const user1 = await userRepo.findOne({ where: { email: userEmail } as any });
-    const user2 = await userRepo.findOne({ where: { email: user2Email } as any });
+    const admin = await userRepo.findOne({
+      where: { email: adminAccount.email } as any,
+    });
+    const user1 = await userRepo.findOne({
+      where: { email: demoAccounts[0].email } as any,
+    });
+    const user2 = await userRepo.findOne({
+      where: { email: demoAccounts[1].email } as any,
+    });
 
     const ensureAcceptedFriend = async (a: number, b: number) => {
       const existing = await friendshipRepo.findOne({

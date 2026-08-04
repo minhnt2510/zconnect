@@ -17,6 +17,9 @@ export interface User {
   warningCount?: number
   restrictionReason?: string | null
   permissions?: string[]
+  createdAt?: string | null
+  lastLoginAt?: string | null
+  registerIp?: string | null
 }
 
 export interface AuthPayload {

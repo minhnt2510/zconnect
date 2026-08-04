@@ -18,6 +18,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../../common/guard/jwt-auth.guard';
+import { getClientIp } from '../../common/utils/client-ip';
 import { MediaService } from '../media/media.service';
 
 @Controller('api/auth')
@@ -68,8 +69,8 @@ export class AuthController {
   }
 
   @Post('register')
-  register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  register(@Req() req: any, @Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto, getClientIp(req));
   }
 
   @Post('verify-registration')

@@ -5,4 +5,7 @@ dist
 .DS_Store
 *.log
 .claude
+.next
+next-env.d.ts
+*.tsbuildinfo
 

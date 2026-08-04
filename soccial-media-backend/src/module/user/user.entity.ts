@@ -1,4 +1,10 @@
-﻿import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+﻿import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { UserRole } from '../../common/enum/user-role.enum';
 import { UserStatus } from '../../common/enum/user-status.enum';
 
@@ -6,6 +12,21 @@ import { UserStatus } from '../../common/enum/user-status.enum';
 export class User {
   @PrimaryGeneratedColumn()
   userId: number;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  createdAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastLoginAt: Date;
+
+  @Column({ nullable: true, length: 64 })
+  registerIp: string;
+
+  @Column({ type: 'int', default: 0 })
+  warningCount: number;
+
+  @Column({ nullable: true, length: 500 })
+  restrictionReason: string;
 
   @Index({ unique: true })
   @Column({ name: 'username' })

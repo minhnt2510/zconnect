@@ -37,6 +37,22 @@ export class PostService {
     private readonly notificationService: NotificationService,
   ) {}
 
+  private async keepActiveAuthors<T extends { owner?: { userId?: number } }>(
+    items: T[],
+  ): Promise<T[]> {
+    const ids = Array.from(
+      new Set(items.map((i) => Number(i.owner?.userId || 0)).filter(Boolean)),
+    );
+    if (!ids.length) return items;
+    const users = await this.userService.findByIds(ids);
+    const activeIds = new Set(
+      users
+        .filter((u) => String(u.status || '').toUpperCase() === 'ACTIVE')
+        .map((u) => u.userId),
+    );
+    return items.filter((i) => activeIds.has(Number(i.owner?.userId || 0)));
+  }
+
   private async getAcceptedFriendIds(userId: number): Promise<number[]> {
     const friendships = await this.friendshipRepo.find({
       where: [
@@ -127,7 +143,8 @@ export class PostService {
         order: { createdAt: 'DESC' },
         take: limit,
       });
-      return posts.map((p) => this.toResponse(p));
+      const visible = await this.keepActiveAuthors(posts);
+      return visible.map((p) => this.toResponse(p));
     }
 
     const friendIds = await this.getAcceptedFriendIds(viewerId);
@@ -147,7 +164,8 @@ export class PostService {
       })
       .slice(0, limit);
 
-    return posts.map((p) => this.toResponse(p, viewerId));
+    const visible = await this.keepActiveAuthors(posts);
+    return visible.map((p) => this.toResponse(p, viewerId));
   }
 
   async findById(id: string, viewerId?: number) {
@@ -155,6 +173,9 @@ export class PostService {
       where: { _id: this.toObjectId(id) } as any,
     });
     if (!post) throw new NotFoundException('Post not found');
+
+    const visible = await this.keepActiveAuthors([post]);
+    if (!visible.length) throw new NotFoundException('Post not found');
 
     if (viewerId) {
       const authorId = Number(post.owner?.userId || 0);
@@ -196,8 +217,10 @@ export class PostService {
       order: { createdAt: 'DESC' },
     });
 
+    const visiblePosts = await this.keepActiveAuthors(allUserPosts);
+
     if (!currentUserId || currentUserId === requestedUserId) {
-      return allUserPosts.map((p) => this.toResponse(p, viewerId));
+      return visiblePosts.map((p) => this.toResponse(p, viewerId));
     }
 
     const friendIds = await this.getAcceptedFriendIds(currentUserId);
@@ -206,7 +229,7 @@ export class PostService {
       return [];
     }
 
-    return allUserPosts
+    return visiblePosts
       .filter((post) => String(post.visibility || 'public') !== 'private')
       .map((p) => this.toResponse(p, viewerId));
   }
@@ -321,6 +344,31 @@ export class PostService {
     if (!post) return;
     post.commentCount = Math.max(0, Number(post.commentCount || 0) - 1);
     await this.postsRepository.save(post);
+  }
+
+  async deleteAllByUser(userId: number): Promise<number> {
+    // TypeORM mongo delete() only maps top-level columns, so filtering on the
+    // nested "owner.userId" path would fall back to deleting the whole collection.
+    const posts = await this.postsRepository.find({
+      where: { 'owner.userId': Number(userId) } as any,
+    });
+    for (const post of posts) {
+      await this.postsRepository.delete({ _id: post._id } as any);
+    }
+    return posts.length;
+  }
+
+  async removeAllReactsByUser(userId: number): Promise<void> {
+    const reactedPosts = await this.postsRepository.find({
+      where: { 'interacts.userId': Number(userId) } as any,
+    });
+
+    for (const post of reactedPosts) {
+      post.interacts = (post.interacts || []).filter(
+        (i) => Number(i.userId) !== Number(userId),
+      );
+      await this.postsRepository.save(post);
+    }
   }
 
   async syncAuthorProfile(userId: number, fullName: string, avatarUrl: string, username: string) {

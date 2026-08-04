@@ -64,6 +64,7 @@ export class UserService {
     dateOfBirth?: string | Date;
     phone?: string;
     avatarUrl?: string;
+    registerIp?: string;
   }): Promise<User> {
     const user = this.usersRepository.create({
       email: data.email,
@@ -74,6 +75,7 @@ export class UserService {
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       phone: data.phone || '',
       avatarUrl: data.avatarUrl || '',
+      registerIp: data.registerIp || undefined,
     });
 
     return this.usersRepository.save(user);
@@ -90,6 +92,12 @@ export class UserService {
       sex: number;
       password: string;
       phone: string;
+      status: string;
+      role: string;
+      lastLoginAt: Date;
+      lockedUntil: Date;
+      warningCount: number;
+      restrictionReason: string;
     }>,
   ): Promise<User> {
     const user = await this.findOne(userId);
@@ -105,6 +113,14 @@ export class UserService {
     if (data.sex !== undefined) user.sex = data.sex;
     if (data.password !== undefined) user.password = data.password;
     if (data.phone !== undefined) user.phone = data.phone;
+    if (data.status !== undefined) user.status = data.status;
+    if (data.role !== undefined) user.role = data.role;
+    if (data.lastLoginAt !== undefined) user.lastLoginAt = data.lastLoginAt;
+    if (data.lockedUntil !== undefined) user.lockedUntil = data.lockedUntil;
+    if (data.warningCount !== undefined) user.warningCount = data.warningCount;
+    if (data.restrictionReason !== undefined) {
+      user.restrictionReason = data.restrictionReason;
+    }
 
     return this.usersRepository.save(user);
   }

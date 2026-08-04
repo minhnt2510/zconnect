@@ -43,6 +43,19 @@ type PendingAction = {
   description: string
 }
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export default function AdminUsersPage() {
   const token = useAuthStore((state) => state.accessToken)
   const me = useAuthStore((state) => state.user)
@@ -132,12 +145,12 @@ export default function AdminUsersPage() {
       </Panel>
 
       <DataTable
-        columns={['Người dùng', 'Vai trò', 'Trạng thái', 'Lịch sử vi phạm', 'Thiết bị/IP', 'Thao tác']}
+        columns={['Người dùng', 'Vai trò', 'Trạng thái', 'Lịch sử vi phạm', 'Ngày đăng ký', 'Truy cập gần nhất', 'Thiết bị/IP', 'Thao tác']}
         empty={!loading && filtered.length === 0 ? <div className={styles.empty}>Không có người dùng phù hợp bộ lọc.</div> : null}
       >
         {loading ? (
           Array.from({ length: 5 }).map((_, index) => (
-            <tr key={index}><td colSpan={6}><div className={styles.skeleton} /></td></tr>
+            <tr key={index}><td colSpan={8}><div className={styles.skeleton} /></td></tr>
           ))
         ) : filtered.map((item) => {
           const isLocked = ['locked', 'temp_locked', 'restricted'].includes(item.accountStatus)
@@ -147,7 +160,9 @@ export default function AdminUsersPage() {
               <td>{ROLE_LABEL[item.role] || item.role}</td>
               <td><StatusBadge value={item.accountStatus} label={ACCOUNT_LABEL[item.accountStatus] || item.accountStatus} /></td>
               <td><b>{item.warningCount || 0}</b> cảnh cáo<br /><span className={styles.muted}>{item.restrictionReason || 'Không có ghi chú'}</span></td>
-              <td>Web console<br /><span className={styles.muted}>127.0.0.1 · trusted</span></td>
+              <td><span className={styles.muted}>{formatDateTime(item.createdAt)}</span></td>
+              <td><span className={styles.muted}>{formatDateTime(item.lastLoginAt)}</span></td>
+              <td><span className={styles.muted}>{item.registerIp || '—'}</span></td>
               <td>
                 <ActionMenu
                   items={[
