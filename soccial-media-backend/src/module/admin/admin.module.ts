@@ -6,6 +6,7 @@ import { PostModule } from '../post/post.module';
 import { CommentModule } from '../comment/comment.module';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { AdminBootstrapService } from './admin-bootstrap.service';
 import { AdminGuard } from '../../common/guard/admin.guard';
 
 @Module({
@@ -16,7 +17,7 @@ import { AdminGuard } from '../../common/guard/admin.guard';
     CommentModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService, AdminGuard],
+  providers: [AdminService, AdminBootstrapService, AdminGuard],
   exports: [AdminService],
 })
 export class AdminModule {}
