@@ -397,21 +397,14 @@ export class PostService {
     return this.toResponse(saved, userId);
   }
 
-  async incrementCommentCount(id: string) {
+  // Set commentCount tu so lieu thuc te (top-level comments), tranh lech so
+  // voi bo dem cong tru thuc cong (reply + xoa nhieu cung post deu gay lech)
+  async setCommentCount(id: string, count: number) {
     const post = await this.postsRepository.findOne({
       where: { _id: this.toObjectId(id) } as any,
     });
     if (!post) return;
-    post.commentCount = Number(post.commentCount || 0) + 1;
-    await this.postsRepository.save(post);
-  }
-
-  async decrementCommentCount(id: string) {
-    const post = await this.postsRepository.findOne({
-      where: { _id: this.toObjectId(id) } as any,
-    });
-    if (!post) return;
-    post.commentCount = Math.max(0, Number(post.commentCount || 0) - 1);
+    post.commentCount = count;
     await this.postsRepository.save(post);
   }
 

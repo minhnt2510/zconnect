@@ -30,6 +30,23 @@ export class CommentService {
     private readonly notificationService: NotificationService,
   ) {}
 
+  private async countTopLevelComments(postId: string): Promise<number> {
+    const rows = await this.commentsRepository.find({
+      where: { postId, parentId: { $in: ['', null] } } as any,
+      select: ['_id'] as any,
+    });
+    return rows.length;
+  }
+
+  private async recountCommentCount(postId: string) {
+    try {
+      const count = await this.countTopLevelComments(postId);
+      await this.postService.setCommentCount(postId, count);
+    } catch {
+      /* ignore */
+    }
+  }
+
   private toResponse(comment: Comment, viewerId?: number) {
     const viewerReact = viewerId
       ? (comment.reacts || []).find((r) => r.userId === viewerId)
@@ -141,12 +158,9 @@ export class CommentService {
 
     const saved = await this.commentsRepository.save(comment);
 
-    // Increment post comment count
-    try {
-      await this.postService.incrementCommentCount(postId);
-    } catch {
-      /* ignore */
-    }
+    // Recalc post comment count from real data (reply also triggers a recount
+    // which is a no-op since only top-level comments are counted)
+    await this.recountCommentCount(postId);
 
     // Emit realtime event
     emitToConversation(
@@ -342,15 +356,19 @@ export class CommentService {
       }
     }
 
+    // Xoa ca reply mo coi cua comment goc de khong con sot ban sao
+    const replies = await this.commentsRepository.find({
+      where: { parentId: commentId } as any,
+    });
+    for (const reply of replies) {
+      await this.commentsRepository.delete({ _id: reply._id } as any);
+    }
+
     await this.commentsRepository.delete({
       _id: this.toObjectId(commentId),
     } as any);
 
-    try {
-      await this.postService.decrementCommentCount(comment.postId);
-    } catch {
-      /* ignore */
-    }
+    await this.recountCommentCount(comment.postId);
 
     return { message: 'Comment deleted successfully' };
   }
@@ -382,12 +400,10 @@ export class CommentService {
       await this.commentsRepository.delete({ _id: reply._id } as any);
     }
 
+    // Recalc tu so lieu thuc te thay cho phep tru thuc cong (tru 1 lan/post
+    // cung khong chinh xac khi user co nhieu comment tren cung mot post)
     for (const postId of affectedPostIds) {
-      try {
-        await this.postService.decrementCommentCount(postId);
-      } catch {
-        /* ignore */
-      }
+      await this.recountCommentCount(postId);
     }
 
     const reactedComments = await this.commentsRepository.find({
