@@ -48,6 +48,12 @@ function buildMariaUrl(): string {
   return `mariadb://${user}:${pass}@${host}:${port}/${db}`;
 }
 
+function mariadbSslOption(): { rejectUnauthorized: false } | undefined {
+  const flag = (process.env.DB_SSL || '').trim().toLowerCase();
+  const urlDemandsTls = /[?&]tls=true/i.test(process.env.DATABASE_URL_MARIA || '');
+  return flag === 'true' || flag === '1' || urlDemandsTls ? { rejectUnauthorized: false } : undefined;
+}
+
 function assertNotLocalDatabaseInProduction(value: string, key: string) {
   if (process.env.NODE_ENV !== 'production') {
     return;
@@ -81,7 +87,7 @@ function buildMongoUrl(): string {
       migrationsRun: true,
       migrationsTableName: 'migrations',
       logging: process.env.DB_LOGGING === 'true',
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+      ssl: mariadbSslOption(),
     }),
     TypeOrmModule.forRoot({
       name: 'mongodb',
