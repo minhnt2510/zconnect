@@ -1,0 +1,50 @@
+name: Keep Alive (Render)
+
+# Giữ cho các service Render free tier luôn thức (không bị sleep sau ~15 phút
+# không có request). Chạy mỗi 10 phút, ping endpoint /api/health bằng curl
+# silent (chỉ lấy HTTP status code, không in body -> tránh output quá lớn).
+#
+# Lưu ý: GitHub Actions cron chỉ chạy trên branch mặc định (main) và cần repo
+# có hoạt động; nếu repo không có commit nào trong 60 ngày, GitHub có thể tạm
+# ngừng workflow dạng schedule.
+
+on:
+  schedule:
+    # Mỗi 10 phút (UTC). Render free tier sleep sau ~15 phút không hoạt động.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # cho phép chạy tay từ tab Actions
+
+permissions:
+  contents: read
+
+jobs:
+  keep-alive:
+    name: Ping health endpoints
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: ZConnect API
+            url: https://zconnect-848j.onrender.com/api/health
+          - name: Twitter Social API
+            url: https://twitter-social-api-latest.onrender.com/api/health
+
+    steps:
+      - name: Ping ${{ matrix.service.name }}
+        run: |
+          URL="${{ matrix.service.url }}"
+          # Thử tối đa 3 lần (Render cold start có thể mất 30-60s)
+          for i in 1 2 3; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 120 "$URL" || true)
+            echo "Attempt $i: HTTP $CODE"
+            if [ "$CODE" -ge 200 ] && [ "$CODE" -lt 300 ]; then
+              echo "OK: ${{ matrix.service.name }} is up (HTTP $CODE)"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::${{ matrix.service.name }} unhealthy after 3 attempts (last HTTP $CODE)"
+          exit 1
